@@ -1,6 +1,4 @@
-using System;
 using ModernUO.Serialization;
-using Server.Engines.ConPVP;
 
 namespace Server.Items
 {
@@ -21,17 +19,6 @@ namespace Server.Items
         public override void OnHit(Mobile attacker, Mobile defender, double damageBonus = 1)
         {
             base.OnHit(attacker, defender, damageBonus);
-
-            if (!Core.AOS && Core.UOR && Layer == Layer.TwoHanded &&
-                attacker.Skills.Anatomy.Value / 400.0 >= Utility.RandomDouble() &&
-                DuelContext.AllowSpecialAbility(attacker, "Paralyzing Blow", false))
-            {
-                defender.SendLocalizedMessage(1072221); // You have been hit by a paralyzing blow!
-                defender.Freeze(TimeSpan.FromSeconds(2.0));
-
-                attacker.SendLocalizedMessage(1060163); // You deliver a paralyzing blow!
-                attacker.PlaySound(0x11C);
-            }
 
             if (!Core.AOS && Poison != null && PoisonCharges > 0)
             {

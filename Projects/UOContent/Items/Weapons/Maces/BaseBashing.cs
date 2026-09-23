@@ -1,5 +1,4 @@
 using ModernUO.Serialization;
-using Server.Engines.ConPVP;
 
 namespace Server.Items
 {
@@ -24,22 +23,5 @@ namespace Server.Items
             defender.Stam -= Utility.Random(3, 3); // 3-5 points of stamina loss
         }
 
-        public override double GetBaseDamage(Mobile attacker)
-        {
-            var damage = base.GetBaseDamage(attacker);
-
-            if (!Core.AOS && Core.UOR && (attacker.Player || attacker.Body.IsHuman) && Layer == Layer.TwoHanded &&
-                attacker.Skills.Anatomy.Value >= 80 &&
-                attacker.Skills.Anatomy.Value / 400.0 >= Utility.RandomDouble() &&
-                DuelContext.AllowSpecialAbility(attacker, "Crushing Blow", false))
-            {
-                damage *= 1.5;
-
-                attacker.SendLocalizedMessage(1060090); // You have delivered a crushing blow!
-                attacker.PlaySound(0x11C);
-            }
-
-            return damage;
-        }
     }
 }

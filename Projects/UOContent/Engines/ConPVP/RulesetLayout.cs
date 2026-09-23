@@ -326,23 +326,6 @@ namespace Server.Engines.ConPVP
                         );
                     }
                 }
-                else
-                {
-                    entries.Add(
-                        new RulesetLayout(
-                            "Combat Abilities",
-                            new[]
-                            {
-                                "Stun",
-                                "Disarm",
-                                "Concussion Blow",
-                                "Crushing Blow",
-                                "Paralyzing Blow"
-                            }
-                        )
-                    );
-                }
-
                 entries.Add(
                     new RulesetLayout(
                         "Skills",
@@ -582,8 +565,6 @@ namespace Server.Engines.ConPVP
                     m7x.SetOption("Spells", "Chain Lightning", false);
                     m7x.SetOption("Spells", "Resurrection", false);
 
-                    m7x.SetOption("Combat Abilities", "Stun", true);
-
                     m7x.SetOption("Skills", "Anatomy", true);
                     m7x.SetOption("Skills", "Detect Hidden", true);
                     m7x.SetOption("Skills", "Poisoning", true);
@@ -630,8 +611,6 @@ namespace Server.Engines.ConPVP
                     s7x.SetOption("Spells", "Meteor Swarm", false);
                     s7x.SetOption("Spells", "Chain Lightning", false);
                     s7x.SetOption("Spells", "Resurrection", false);
-
-                    s7x.SetOptionRange("Combat Abilities", true);
 
                     s7x.SetOption("Skills", "Anatomy", true);
                     s7x.SetOption("Skills", "Detect Hidden", true);

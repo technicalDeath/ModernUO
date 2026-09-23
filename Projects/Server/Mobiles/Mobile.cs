@@ -6392,8 +6392,13 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
                 }
             case 5:
                 {
-                    DisarmReady = reader.ReadBool();
-                    StunReady = reader.ReadBool();
+                    // The Britannia Renaissance UOR combat contract removes Wrestling
+                    // Stun/Disarm. Consume legacy values to retain save compatibility, but do
+                    // not restore a ready state that could execute after a restart.
+                    reader.ReadBool();
+                    reader.ReadBool();
+                    DisarmReady = false;
+                    StunReady = false;
 
                     goto case 4;
                 }
