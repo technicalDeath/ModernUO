@@ -857,6 +857,7 @@ public abstract partial class BaseWeapon
 
         if (canSwing && attacker.HarmfulCheck(defender))
         {
+            attacker.LastSwingTime = Core.TickCount;
             attacker.DisruptiveAction();
 
             attacker.NetState?.SendSwing(attacker.Serial, defender.Serial);

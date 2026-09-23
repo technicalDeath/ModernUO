@@ -37,12 +37,32 @@ namespace Server.Items
 
         public override SkillName AccuracySkill => SkillName.Archery;
 
+        /// <summary>
+        ///     Gets the time a ranged attacker must remain stationary before firing.
+        ///     The Renaissance UOR profile uses the same Dexterity curve in PvM and PvP:
+        ///     1.0 seconds at 25 Dex or below, 0.5 seconds at 100 Dex or above, with
+        ///     intermediate values rounded to the nearest 50 milliseconds.
+        /// </summary>
+        internal static TimeSpan GetStationaryDelay(Mobile attacker)
+        {
+            if (!Core.UOR)
+            {
+                return TimeSpan.FromMilliseconds(Core.SE ? 250 : Core.AOS ? 500 : 1000);
+            }
+
+            var dex = Math.Clamp(attacker.Dex, 25, 100);
+            var milliseconds = 1000.0 - (dex - 25) * (500.0 / 75.0);
+            milliseconds = Math.Round(milliseconds / 50.0, MidpointRounding.AwayFromZero) * 50.0;
+
+            return TimeSpan.FromMilliseconds(milliseconds);
+        }
+
         public override TimeSpan OnSwing(Mobile attacker, Mobile defender, double damageBonus = 1.0)
         {
             // WeaponAbility a = WeaponAbility.GetCurrentAbility( attacker );
 
-            // Make sure we've been standing still for .25/.5/1 second depending on Era
-            if (Core.TickCount - attacker.LastMoveTime >= (Core.SE ? 250 : Core.AOS ? 500 : 1000) ||
+            // Make sure we've been standing still for the era/profile-specific delay.
+            if (Core.TickCount - attacker.LastMoveTime >= GetStationaryDelay(attacker).TotalMilliseconds ||
                 Core.AOS && WeaponAbility.GetCurrentAbility(attacker) is MovingShot)
             {
                 var canSwing = true;
@@ -70,11 +90,14 @@ namespace Server.Items
 
                     if (attacker is BaseCreature bc && bc.TriggerAbility(MonsterAbilityTrigger.CombatAction, defender))
                     {
+                        attacker.LastSwingTime = Core.TickCount;
                         return GetDelay(attacker);
                     }
 
                     if (OnFired(attacker, defender))
                     {
+                        attacker.LastSwingTime = Core.TickCount;
+
                         if (CheckHit(attacker, defender))
                         {
                             OnHit(attacker, defender);

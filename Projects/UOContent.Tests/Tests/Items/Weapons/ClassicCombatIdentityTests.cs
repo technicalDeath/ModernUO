@@ -153,6 +153,50 @@ public class ClassicCombatIdentityTests
         });
     }
 
+    [Theory]
+    [InlineData(1, 1000)]
+    [InlineData(25, 1000)]
+    [InlineData(63, 750)]
+    [InlineData(100, 500)]
+    [InlineData(150, 500)]
+    public void UorRangedStationaryDelay_ScalesWithDexInPvmAndPvp(int dex, int expectedMilliseconds)
+    {
+        WithUor(() =>
+        {
+            foreach (var attacker in new Mobile[] { NewMobile(), NewPlayer() })
+            {
+                attacker.Dex = dex;
+
+                Assert.Equal(
+                    expectedMilliseconds,
+                    (int)BaseRanged.GetStationaryDelay(attacker).TotalMilliseconds
+                );
+
+                attacker.Delete();
+            }
+        });
+    }
+
+    [Fact]
+    public void UorRangedMovementAttempt_DoesNotAdvanceTheSwingAnchor()
+    {
+        WithUor(() =>
+        {
+            var attacker = NewPlayer();
+            var defender = NewMobile();
+            var bow = new Bow();
+            attacker.LastSwingTime = 12345;
+            attacker.LastMoveTime = Core.TickCount;
+
+            Assert.Equal(TimeSpan.FromMilliseconds(250), bow.OnSwing(attacker, defender));
+            Assert.Equal(12345, attacker.LastSwingTime);
+
+            bow.Delete();
+            attacker.Delete();
+            defender.Delete();
+        });
+    }
+
     [Fact]
     public void UorInstaHit_QuickSwitchUsesLastSwingAndCurrentWeaponDelay()
     {

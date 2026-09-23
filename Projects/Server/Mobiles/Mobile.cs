@@ -807,7 +807,6 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
         {
             weapon.OnBeforeSwing(this, combatant);
             RevealingAction();
-            LastSwingTime = Core.TickCount;
             NextCombatTime =
                 Core.TickCount + (int)weapon.OnSwing(this, combatant).TotalMilliseconds;
         }
