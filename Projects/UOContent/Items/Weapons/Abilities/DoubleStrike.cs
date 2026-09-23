@@ -44,6 +44,7 @@ namespace Server.Items
             BaseWeapon.InDoubleStrike = true;
             attacker.RevealingAction();
             attacker.NextCombatTime = Core.TickCount + (int)weapon.OnSwing(attacker, defender).TotalMilliseconds;
+            attacker.LastSwingTime = Core.TickCount;
             BaseWeapon.InDoubleStrike = false;
         }
     }

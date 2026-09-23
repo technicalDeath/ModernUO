@@ -1070,6 +1070,13 @@ public abstract partial class BaseWeapon
         {
             from.NextCombatTime = Core.TickCount + (int)GetDelay(from).TotalMilliseconds;
         }
+        else if (from.LastSwingTime != 0)
+        {
+            // UOR quick switching anchors the next swing to the last swing, not to the
+            // equip action. Faster weapons can therefore become ready sooner, while slower
+            // weapons cannot bypass their own delay.
+            from.NextCombatTime = from.LastSwingTime + (long)GetDelay(from).TotalMilliseconds;
+        }
 
         if (UseSkillMod && _accuracyLevel != WeaponAccuracyLevel.Regular)
         {

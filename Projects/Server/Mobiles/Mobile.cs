@@ -501,6 +501,10 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
 
     public long NextCombatTime { get; set; }
 
+    // The last swing is the timing anchor for UOR instant-hit quick switching.
+    // This transient combat state is intentionally not serialized with the mobile.
+    public long LastSwingTime { get; set; }
+
     [CommandProperty(AccessLevel.GameMaster)]
     public int NameHue { get; set; } = -1;
 
@@ -803,6 +807,7 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
         {
             weapon.OnBeforeSwing(this, combatant);
             RevealingAction();
+            LastSwingTime = Core.TickCount;
             NextCombatTime =
                 Core.TickCount + (int)weapon.OnSwing(this, combatant).TotalMilliseconds;
         }
@@ -1290,6 +1295,13 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
             m_Target?.Cancel(this, TargetCancelType.Disconnected);
             m_Spell?.OnConnectionChanged();
             m_NetState?.CancelAllTrades();
+
+            if (value == null)
+            {
+                // A disconnected client must not retain a pending swing deadline.
+                LastSwingTime = 0;
+                NextCombatTime = 0;
+            }
 
             var box = FindBankNoCreate();
 
@@ -4750,6 +4762,9 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
 
         m_Spell?.OnCasterKilled();
         // m_Spell.Disturb( DisturbType.Kill );
+
+        LastSwingTime = 0;
+        NextCombatTime = 0;
 
         m_Target?.Cancel(this, TargetCancelType.Canceled);
 
