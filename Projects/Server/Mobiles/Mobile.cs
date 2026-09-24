@@ -1687,7 +1687,8 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
         }
     }
 
-    public virtual bool Murderer => Kills >= 5 || AdditionalMurdererHandler?.Invoke(this) == true;
+    public virtual bool Murderer =>
+        (LegacyMurdererCountsEnabled && Kills >= 5) || AdditionalMurdererHandler?.Invoke(this) == true;
 
     [CommandProperty(AccessLevel.Counselor, AccessLevel.GameMaster)]
     public virtual bool Criminal
@@ -1803,6 +1804,9 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
 
     /// <summary>Optional shard-owned red-status extension, evaluated in addition to Kills.</summary>
     public static AdditionalMurdererHandler AdditionalMurdererHandler { get; set; }
+
+    /// <summary>Allows a shard-owned adjudicator to stop historical Kills from imposing red status.</summary>
+    public static bool LegacyMurdererCountsEnabled { get; set; } = true;
 
     public static SkillCheckTargetHandler SkillCheckTargetHandler { get; set; }
 

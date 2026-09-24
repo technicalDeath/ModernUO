@@ -21,10 +21,15 @@ public class MurdererHookTests
             Assert.True(mobile.Murderer);
             Mobile.AdditionalMurdererHandler = static _ => false;
             Assert.False(mobile.Murderer);
+            mobile.Kills = 5;
+            Assert.True(mobile.Murderer);
+            Mobile.LegacyMurdererCountsEnabled = false;
+            Assert.False(mobile.Murderer);
         }
         finally
         {
             Mobile.AdditionalMurdererHandler = previous;
+            Mobile.LegacyMurdererCountsEnabled = true;
             mobile.Delete();
         }
     }
