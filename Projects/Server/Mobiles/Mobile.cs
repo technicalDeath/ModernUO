@@ -191,6 +191,12 @@ public delegate bool AllowBeneficialHandler(Mobile from, Mobile target);
 
 public delegate bool AllowHarmfulHandler(Mobile from, Mobile target);
 
+/// <summary>Optional shard-owned interception point for lethal damage before stock death resolution.</summary>
+public delegate bool LethalDamageHandler(Mobile victim, Mobile from, int amount);
+
+/// <summary>Optional shard-owned extension to the stock damageability check.</summary>
+public delegate bool CanBeDamagedHandler(Mobile mobile);
+
 public delegate bool AdditionalMurdererHandler(Mobile mobile);
 
 public delegate Container CreateCorpseHandler(
@@ -1801,6 +1807,10 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
     public static AllowBeneficialHandler AllowBeneficialHandler { get; set; }
 
     public static AllowHarmfulHandler AllowHarmfulHandler { get; set; }
+
+    public static LethalDamageHandler LethalDamageHandler { get; set; }
+
+    public static CanBeDamagedHandler CanBeDamagedHandler { get; set; }
 
     /// <summary>Optional shard-owned red-status extension, evaluated in addition to Kills.</summary>
     public static AdditionalMurdererHandler AdditionalMurdererHandler { get; set; }
@@ -5974,7 +5984,7 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
     {
     }
 
-    public virtual bool CanBeDamaged() => !m_Blessed;
+    public virtual bool CanBeDamaged() => !m_Blessed && (CanBeDamagedHandler?.Invoke(this) ?? true);
 
     public virtual void Damage(int amount, Mobile from = null, bool informMount = true, bool ignoreEvilOmen = false)
     {
@@ -6039,6 +6049,11 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
         if (newHits < 0)
         {
             LastKiller = from;
+
+            if (LethalDamageHandler?.Invoke(this, from, amount) == true)
+            {
+                return;
+            }
 
             Hits = 0;
 
