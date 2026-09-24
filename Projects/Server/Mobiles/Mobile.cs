@@ -197,6 +197,12 @@ public delegate bool LethalDamageHandler(Mobile victim, Mobile from, int amount)
 /// <summary>Optional shard-owned extension to the stock damageability check.</summary>
 public delegate bool CanBeDamagedHandler(Mobile mobile);
 
+/// <summary>Optional shard-owned interception point for healing before stock hit-point changes.</summary>
+public delegate bool HealHandler(Mobile target, Mobile from, int amount);
+
+/// <summary>Optional shard-owned interception point for curing poison.</summary>
+public delegate bool CurePoisonHandler(Mobile target, Mobile from);
+
 public delegate bool AdditionalMurdererHandler(Mobile mobile);
 
 public delegate Container CreateCorpseHandler(
@@ -1811,6 +1817,10 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
     public static LethalDamageHandler LethalDamageHandler { get; set; }
 
     public static CanBeDamagedHandler CanBeDamagedHandler { get; set; }
+
+    public static HealHandler HealHandler { get; set; }
+
+    public static CurePoisonHandler CurePoisonHandler { get; set; }
 
     /// <summary>Optional shard-owned red-status extension, evaluated in addition to Kills.</summary>
     public static AdditionalMurdererHandler AdditionalMurdererHandler { get; set; }
@@ -6160,6 +6170,11 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
 
     public void Heal(int amount, Mobile from, bool message = true)
     {
+        if (HealHandler?.Invoke(this, from, amount) == true)
+        {
+            return;
+        }
+
         if (!Alive || IsDeadBondedPet)
         {
             return;
@@ -8810,6 +8825,11 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
     /// <returns>True if poison was cured, false if otherwise.</returns>
     public virtual bool CurePoison(Mobile from)
     {
+        if (CurePoisonHandler?.Invoke(this, from) == true)
+        {
+            return false;
+        }
+
         if (CheckCure(from))
         {
             var oldPoison = m_Poison;
