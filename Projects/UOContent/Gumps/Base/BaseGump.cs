@@ -42,6 +42,12 @@ public abstract class BaseGump
      */
     public virtual bool Singleton => false;
 
+    /// <summary>
+    ///     Allows a read-only gump to receive button responses while an ordinary player is
+    ///     Knocked Out. Gameplay-mutating gumps remain blocked by the incoming response gate.
+    /// </summary>
+    public virtual bool AllowKnockedOutResponse => false;
+
     public BaseGump(int x, int y) : this()
     {
         X = x;

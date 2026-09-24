@@ -115,6 +115,8 @@ public static class Stealing
             }
 
             var rootIsPlayer = mobRoot?.Player == true;
+            // KnockedOutLoot is an optional no-skill bypass only. A false result deliberately
+            // falls through to the ordinary stealing rules; it must never block stock stealing.
             var bypassSkill = rootIsPlayer && KnockedOutLoot?.Invoke(_thief, toSteal, mobRoot) == true;
 
             var si = toSteal.Parent == null || !toSteal.Movable

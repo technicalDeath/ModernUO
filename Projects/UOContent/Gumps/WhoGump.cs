@@ -19,6 +19,8 @@ public class WhoGump : DynamicGump
 
     public override bool Singleton => true;
 
+    public override bool AllowKnockedOutResponse => true;
+
     public WhoGump(Mobile owner, string filter) : this(BuildList(owner, filter))
     {
     }

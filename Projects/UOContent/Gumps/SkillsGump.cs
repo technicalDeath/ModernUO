@@ -77,6 +77,8 @@ namespace Server.Gumps
 
     public class SkillsGump : Gump
     {
+        public override bool AllowKnockedOutResponse => true;
+
         private const int NameWidth = 107;
         private const int ValueWidth = 128;
 

@@ -100,7 +100,10 @@ public static class IncomingPlayerPackets
             if (huePicker.Serial == serial)
             {
                 state.RemoveHuePicker(huePicker);
-                huePicker.OnResponse(hue);
+                if (state.Mobile.CanPerformAction())
+                {
+                    huePicker.OnResponse(hue);
+                }
                 break;
             }
         }
@@ -144,6 +147,11 @@ public static class IncomingPlayerPackets
                 }
             case 0x24: // Use skill
                 {
+                    if (!from.CanPerformAction())
+                    {
+                        break;
+                    }
+
                     var tokenizer = command.Tokenize(' ');
                     if (!tokenizer.MoveNext() || !int.TryParse(tokenizer.Current, out var skillIndex))
                     {
@@ -156,6 +164,11 @@ public static class IncomingPlayerPackets
                 }
             case 0x43: // Open spellbook
                 {
+                    if (!from.CanPerformAction())
+                    {
+                        break;
+                    }
+
                     if (!int.TryParse(command, out var booktype))
                     {
                         booktype = 1;
@@ -167,6 +180,11 @@ public static class IncomingPlayerPackets
                 }
             case 0x27: // Cast spell from book
                 {
+                    if (!from.CanPerformAction())
+                    {
+                        break;
+                    }
+
                     var tokenizer = command.Tokenize(' ');
                     var spellID = (tokenizer.MoveNext() ? Utility.ToInt32(tokenizer.Current) : 0) - 1;
                     var serial = tokenizer.MoveNext() ? (Serial)Utility.ToUInt32(tokenizer.Current) : Serial.MinusOne;
@@ -177,12 +195,22 @@ public static class IncomingPlayerPackets
                 }
             case 0x58: // Open door
                 {
+                    if (!from.CanPerformAction())
+                    {
+                        break;
+                    }
+
                     BaseDoor.OpenDoorMacroUsed(from);
 
                     break;
                 }
             case 0x56: // Cast spell from macro
                 {
+                    if (!from.CanPerformAction())
+                    {
+                        break;
+                    }
+
                     var spellID = Utility.ToInt32(command) - 1;
 
                     Spellbook.CastSpellRequest(from, spellID, null);
@@ -191,6 +219,11 @@ public static class IncomingPlayerPackets
                 }
             case 0xF4: // Invoke virtues from macro
                 {
+                    if (!from.CanPerformAction())
+                    {
+                        break;
+                    }
+
                     var virtueID = Utility.ToInt32(command) - 1;
 
                     VirtueGump.RequestVirtueMacro((PlayerMobile)from, virtueID);
@@ -246,7 +279,7 @@ public static class IncomingPlayerPackets
             {
                 p.OnCancel(from);
             }
-            else
+            else if (from.CanPerformAction())
             {
                 p.OnResponse(from, text);
             }
@@ -283,7 +316,7 @@ public static class IncomingPlayerPackets
             {
                 p.OnCancel(from);
             }
-            else
+            else if (from.CanPerformAction())
             {
                 p.OnResponse(from, text);
             }
@@ -317,7 +350,10 @@ public static class IncomingPlayerPackets
 
             if (index >= 0 && index < menu.EntryLength)
             {
-                menu.OnResponse(state, index);
+                if (state.Mobile.CanPerformAction())
+                {
+                    menu.OnResponse(state, index);
+                }
             }
             else
             {
@@ -343,6 +379,11 @@ public static class IncomingPlayerPackets
 
     public static void ChangeSkillLock(NetState state, SpanReader reader)
     {
+        if (!state.Mobile.CanPerformAction())
+        {
+            return;
+        }
+
         var s = state.Mobile.Skills[reader.ReadInt16()];
 
         s?.SetLockNoRelay((SkillLock)reader.ReadByte());
@@ -355,7 +396,10 @@ public static class IncomingPlayerPackets
 
     public static void SetWarMode(NetState state, SpanReader reader)
     {
-        state.Mobile?.DelayChangeWarmode(reader.ReadBoolean());
+        if (state.Mobile?.CanPerformAction() == true)
+        {
+            state.Mobile.DelayChangeWarmode(reader.ReadBoolean());
+        }
     }
 
     // TODO: Throttle/make this more safe
@@ -459,12 +503,18 @@ public static class IncomingPlayerPackets
 
     public static void GuildGumpRequest(NetState state, IEntity e, EncodedReader reader)
     {
-        Guild.GuildGumpRequest(state.Mobile);
+        if (state.Mobile?.CanPerformAction() == true)
+        {
+            Guild.GuildGumpRequest(state.Mobile);
+        }
     }
 
     public static void QuestGumpRequest(NetState state, IEntity e, EncodedReader reader)
     {
-        MLQuestSystem.QuestGumpRequest(state.Mobile);
+        if (state.Mobile?.CanPerformAction() == true)
+        {
+            MLQuestSystem.QuestGumpRequest(state.Mobile);
+        }
     }
 
     public static unsafe void EncodedCommand(NetState state, SpanReader reader)

@@ -28,6 +28,11 @@ public static class IncomingVendorPackets
 
     public static void VendorBuyReply(NetState state, SpanReader reader)
     {
+        if (!state.Mobile.CanPerformAction())
+        {
+            return;
+        }
+
         var vendor = World.FindMobile((Serial)reader.ReadUInt32());
 
         if (vendor == null)
@@ -68,6 +73,11 @@ public static class IncomingVendorPackets
 
     public static void VendorSellReply(NetState state, SpanReader reader)
     {
+        if (!state.Mobile.CanPerformAction())
+        {
+            return;
+        }
+
         var serial = (Serial)reader.ReadUInt32();
         var vendor = World.FindMobile(serial);
 

@@ -8,6 +8,8 @@ namespace Server.ContextMenus
         {
         }
 
+        public override bool AllowKnockedOut => true;
+
         public override void OnClick(Mobile from, IEntity target)
         {
             var p = Party.Get(from);

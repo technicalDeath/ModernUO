@@ -127,7 +127,14 @@ public static class IncomingTargetingPackets
                 return;
             }
 
-            t.Invoke(from, toTarget);
+            if (from.CanPerformAction())
+            {
+                t.Invoke(from, toTarget);
+            }
+            else
+            {
+                t.Cancel(from, TargetCancelType.Canceled);
+            }
         }
     }
 }

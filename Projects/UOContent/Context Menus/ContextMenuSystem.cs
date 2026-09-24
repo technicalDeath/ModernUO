@@ -92,7 +92,7 @@ public static class ContextMenuSystem
             range = 18;
         }
 
-        if (e.Enabled && from.InRange(p, range))
+        if (e.Enabled && from.InRange(p, range) && (from.CanPerformAction() || e.AllowKnockedOut))
         {
             e.OnClick(from, entity);
         }

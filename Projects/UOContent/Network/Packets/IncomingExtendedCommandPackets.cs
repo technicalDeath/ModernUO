@@ -146,7 +146,15 @@ public static partial class IncomingExtendedCommandPackets
             return;
         }
 
-        switch (reader.ReadByte())
+        var messageType = reader.ReadByte();
+        // Party communication and membership management do not mutate gameplay state. Changing
+        // party loot permission does, so retain the gameplay gate for that operation.
+        if (!state.Mobile.CanPerformAction() && messageType == 0x06)
+        {
+            return;
+        }
+
+        switch (messageType)
         {
             case 0x01:
                 {
@@ -271,7 +279,10 @@ public static partial class IncomingExtendedCommandPackets
 
     public static void ToggleFlying(NetState state, SpanReader reader)
     {
-        state.Mobile?.ToggleFlying();
+        if (state.Mobile?.CanPerformAction() == true)
+        {
+            state.Mobile.ToggleFlying();
+        }
     }
 
     public static void StunRequest(NetState state, SpanReader reader)
@@ -303,6 +314,11 @@ public static partial class IncomingExtendedCommandPackets
         var from = state.Mobile;
 
         if (from == null)
+        {
+            return;
+        }
+
+        if (!from.CanPerformAction())
         {
             return;
         }
@@ -393,6 +409,11 @@ public static partial class IncomingExtendedCommandPackets
             return;
         }
 
+        if (!from.CanPerformAction())
+        {
+            return;
+        }
+
         if (from.AccessLevel >= AccessLevel.Counselor || Core.TickCount - from.NextActionTime >= 0)
         {
             var bandage = World.FindItem((Serial)reader.ReadUInt32());
@@ -421,6 +442,11 @@ public static partial class IncomingExtendedCommandPackets
 
     public static void TargetedSpell(NetState state, SpanReader reader)
     {
+        if (!state.Mobile.CanPerformAction())
+        {
+            return;
+        }
+
         var spellId = (short)(reader.ReadInt16() - 1); // zero based;
 
         Spellbook.TargetedSpell(state.Mobile, World.FindEntity((Serial)reader.ReadUInt32()), spellId);
@@ -428,6 +454,11 @@ public static partial class IncomingExtendedCommandPackets
 
     public static void TargetedSkillUse(NetState state, SpanReader reader)
     {
+        if (!state.Mobile.CanPerformAction())
+        {
+            return;
+        }
+
         var skillId = reader.ReadInt16();
 
         PlayerMobile.TargetedSkillUse(state.Mobile, World.FindEntity((Serial)reader.ReadUInt32()), skillId);
@@ -438,6 +469,11 @@ public static partial class IncomingExtendedCommandPackets
 
     public static void TargetByResourceMacro(NetState state, SpanReader reader)
     {
+        if (!state.Mobile.CanPerformAction())
+        {
+            return;
+        }
+
         var serial = (Serial)reader.ReadUInt32();
 
         if (serial.IsItem)

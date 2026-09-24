@@ -1864,6 +1864,13 @@ namespace Server.Engines.Craft
 
             protected override void OnTick()
             {
+                if (!m_From.CanPerformAction())
+                {
+                    m_From.EndAction<CraftSystem>();
+                    Stop();
+                    return;
+                }
+
                 m_iCount++;
 
                 m_From.DisruptiveAction();

@@ -163,11 +163,22 @@ public static partial class GumpSystem
                 textFields,
                 textBlock
             );
+
+            if (state.Mobile is { } mobile && !mobile.CanPerformAction() && !baseGump.AllowKnockedOutResponse)
+            {
+                return;
+            }
+
             baseGump.OnResponse(state, relayInfo);
         }
 
         if (typeId == 461)
         {
+            if (state.Mobile is not { } mobile || !mobile.CanPerformAction())
+            {
+                return;
+            }
+
             // Virtue gump
             var switchCount = reader.Remaining >= 4 ? reader.ReadInt32() : 0;
 

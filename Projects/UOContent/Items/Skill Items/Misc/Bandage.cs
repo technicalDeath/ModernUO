@@ -206,7 +206,7 @@ public class BandageContext : Timer
 
         var petPatient = Patient as BaseCreature;
 
-        if (!Healer.Alive)
+        if (!Healer.Alive || !Healer.CanPerformAction())
         {
             Healer.SendLocalizedMessage(500962); // You were unable to finish your work before you died.
             return;
@@ -453,6 +453,11 @@ public class BandageContext : Timer
 
     public static BandageContext BeginHeal(Mobile healer, Mobile patient)
     {
+        if (!healer.CanPerformAction())
+        {
+            return null;
+        }
+
         var creature = patient as BaseCreature;
 
         if (patient is Golem)

@@ -92,6 +92,11 @@ public static class IncomingMobilePackets
 
     public static void SecureTrade(NetState state, SpanReader reader)
     {
+        if (!state.Mobile.CanPerformAction())
+        {
+            return;
+        }
+
         switch (reader.ReadByte())
         {
             case 1: // Cancel

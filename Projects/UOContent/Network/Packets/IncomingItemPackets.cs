@@ -44,6 +44,12 @@ public static class IncomingItemPackets
     public static void EquipReq(NetState state, SpanReader reader)
     {
         var from = state.Mobile;
+
+        if (!from.CanPerformAction())
+        {
+            return;
+        }
+
         var item = from.Holding;
 
         var valid = item != null && item.HeldBy == from && item.Map == Map.Internal;
@@ -111,6 +117,11 @@ public static class IncomingItemPackets
 
     public static void EquipMacro(NetState state, SpanReader reader)
     {
+        if (!state.Mobile.CanPerformAction())
+        {
+            return;
+        }
+
         int count = reader.ReadByte();
         var serialList = PooledRefList<Serial>.Create(count);
         for (var i = 0; i < count; ++i)
@@ -124,6 +135,11 @@ public static class IncomingItemPackets
 
     public static void UnequipMacro(NetState state, SpanReader reader)
     {
+        if (!state.Mobile.CanPerformAction())
+        {
+            return;
+        }
+
         int count = reader.ReadByte();
         var layers = PooledRefList<Layer>.Create(count);
         for (var i = 0; i < count; ++i)

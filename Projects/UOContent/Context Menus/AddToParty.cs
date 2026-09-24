@@ -8,6 +8,8 @@ namespace Server.ContextMenus
         {
         }
 
+        public override bool AllowKnockedOut => true;
+
         public override void OnClick(Mobile from, IEntity target)
         {
             if (target is not Mobile targetMobile)

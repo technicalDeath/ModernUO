@@ -5623,8 +5623,31 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
 
     public virtual void DoSpeech(string text, int[] keywords, MessageType type, int hue)
     {
-        if (Deleted || CommandSystem.Handle(this, text, type))
+        if (Deleted)
         {
+            return;
+        }
+
+        // Staff commands remain available through the normal command path. Ordinary knocked out
+        // players cannot use speech or command packets to invoke gameplay commands, and normal
+        // speech can trigger gameplay listeners such as pet orders and guard calls.
+        if (!CanPerformAction() &&
+            (type != MessageType.Emote || text.StartsWith(CommandSystem.Prefix, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        if (CommandSystem.Handle(this, text, type))
+        {
+            return;
+        }
+
+        // Emotes are a communication-only exception. Broadcast them without invoking speech
+        // listeners, which prevents pet orders, guard calls, vendor commands, and similar
+        // gameplay effects from being triggered by an emote.
+        if (!CanPerformAction())
+        {
+            PublicOverheadMessage(MessageType.Emote, hue, false, text);
             return;
         }
 

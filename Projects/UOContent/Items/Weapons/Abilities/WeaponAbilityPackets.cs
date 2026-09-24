@@ -14,6 +14,12 @@ namespace Server.Items
         public static void SetAbility(NetState state, IEntity e, EncodedReader reader)
         {
             var m = state.Mobile;
+
+            if (!m.CanPerformAction())
+            {
+                return;
+            }
+
             var index = reader.ReadInt32();
 
             if (index >= 1 && index < WeaponAbility.Abilities.Length)

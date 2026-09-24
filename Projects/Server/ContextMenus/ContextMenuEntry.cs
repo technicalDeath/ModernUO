@@ -84,6 +84,11 @@ public class ContextMenuEntry
     public virtual bool NonLocalUse => false;
 
     /// <summary>
+    ///     Gets a value indicating whether this entry is harmless for a knocked out player.
+    /// </summary>
+    public virtual bool AllowKnockedOut => false;
+
+    /// <summary>
     ///     Overridable. Virtual event invoked when the entry is clicked.
     /// </summary>
     public virtual void OnClick(Mobile from, IEntity target)
