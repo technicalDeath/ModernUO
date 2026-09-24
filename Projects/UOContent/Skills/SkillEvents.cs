@@ -10,6 +10,14 @@ namespace Server.Misc;
 public static class SkillEvents
 {
     /// <summary>
+    /// Raised after the stock skill-use and anti-macro eligibility checks, before the stock gain
+    /// roll is applied. A subscriber returning <c>true</c> owns the gain decision and suppresses
+    /// the stock gain path. This is intentionally narrow so shard-owned progression can stop at a
+    /// threshold without changing ordinary stock gains below it.
+    /// </summary>
+    public static event Func<Mobile, Skill, bool, bool> SkillGainOverride;
+
+    /// <summary>
     /// Raised once per skill attempt from the four <c>Mobile_SkillCheck*</c> handlers with the attempt's
     /// outcome, including attempts the handler resolves without a roll (too difficult, no challenge).
     /// Not raised when the mobile lacks the skill. Fires for every <see cref="Mobile" />, including
@@ -20,4 +28,8 @@ public static class SkillEvents
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void InvokeSkillUsed(Mobile from, Skill skill, bool success) =>
         SkillUsed?.Invoke(from, skill, success);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool InvokeSkillGainOverride(Mobile from, Skill skill, bool success) =>
+        SkillGainOverride?.Invoke(from, skill, success) == true;
 }

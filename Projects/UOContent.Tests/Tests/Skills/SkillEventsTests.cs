@@ -121,4 +121,34 @@ public class SkillEventsTests
             from.Delete();
         }
     }
+
+    [Fact]
+    public void GainOverride_RunsAfterEligibilityAndSuppressesStockGain()
+    {
+        var from = new Mobile();
+        var skill = from.Skills[SkillName.Mining];
+        skill.Base = 50.0;
+        var calls = 0;
+
+        bool Handle(Mobile mobile, Skill gainedSkill, bool success)
+        {
+            calls++;
+            Assert.Same(from, mobile);
+            Assert.Same(skill, gainedSkill);
+            return true;
+        }
+
+        SkillEvents.SkillGainOverride += Handle;
+        try
+        {
+            SkillCheck.CheckSkill(from, skill, new object(), 0.5);
+            Assert.Equal(1, calls);
+            Assert.Equal(50.0, skill.Base);
+        }
+        finally
+        {
+            SkillEvents.SkillGainOverride -= Handle;
+            from.Delete();
+        }
+    }
 }

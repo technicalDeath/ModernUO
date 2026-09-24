@@ -123,28 +123,31 @@ public static class SkillCheck
             }
             else if (AllowGain(from, skill, amObj))
             {
-                var gc = (double)(from.Skills.Cap - from.Skills.Total) / from.Skills.Cap;
-                gc += (skill.Cap - skill.Base) / skill.Cap;
-                gc /= 2;
-
-                gc += (1.0 - chance) * (success ? 0.5 : Core.AOS ? 0.0 : 0.2);
-                gc /= 2;
-
-                gc *= skill.Info.GainFactor;
-
-                if (gc < 0.01)
+                if (!SkillEvents.InvokeSkillGainOverride(from, skill, success))
                 {
-                    gc = 0.01;
-                }
+                    var gc = (double)(from.Skills.Cap - from.Skills.Total) / from.Skills.Cap;
+                    gc += (skill.Cap - skill.Base) / skill.Cap;
+                    gc /= 2;
 
-                if (from is BaseCreature { Controlled: true })
-                {
-                    gc *= 2;
-                }
+                    gc += (1.0 - chance) * (success ? 0.5 : Core.AOS ? 0.0 : 0.2);
+                    gc /= 2;
 
-                if (gc >= Utility.RandomDouble())
-                {
-                    Gain(from, skill);
+                    gc *= skill.Info.GainFactor;
+
+                    if (gc < 0.01)
+                    {
+                        gc = 0.01;
+                    }
+
+                    if (from is BaseCreature { Controlled: true })
+                    {
+                        gc *= 2;
+                    }
+
+                    if (gc >= Utility.RandomDouble())
+                    {
+                        Gain(from, skill);
+                    }
                 }
             }
 
