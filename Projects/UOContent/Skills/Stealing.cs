@@ -27,11 +27,16 @@ public static class Stealing
         bool caught
     );
 
+    public delegate bool KnockedOutLootHandler(Mobile thief, Item item, Mobile victim);
+
     /// <summary>Shard-owned pre-transfer restriction; true preserves ordinary stealing.</summary>
     public static TheftEligibilityHandler TheftEligibility { get; set; }
 
     /// <summary>Shard-owned post-resolution observer; stock outcome is already committed.</summary>
     public static TheftResolutionHandler TheftResolved { get; set; }
+
+    /// <summary>Optional shard-owned no-skill resolution for an authorized Knocked Out victim.</summary>
+    public static KnockedOutLootHandler KnockedOutLoot { get; set; }
 
     public static bool ClassicMode { get; private set; }
 
@@ -110,6 +115,7 @@ public static class Stealing
             }
 
             var rootIsPlayer = mobRoot?.Player == true;
+            var bypassSkill = rootIsPlayer && KnockedOutLoot?.Invoke(_thief, toSteal, mobRoot) == true;
 
             var si = toSteal.Parent == null || !toSteal.Movable
                 ? StealableArtifacts.GetStealableInstance(toSteal)
@@ -127,11 +133,11 @@ public static class Stealing
             {
                 _thief.SendLocalizedMessage(502700); // You cannot steal from people or monsters right now.  Practice on chests and barrels.
             }
-            else if (rootIsPlayer && !IsInGuild(_thief))
+            else if (rootIsPlayer && !IsInGuild(_thief) && !bypassSkill)
             {
                 _thief.SendLocalizedMessage(1005596); // You must be in the thieves guild to steal from other players.
             }
-            else if (SuspendOnMurder && rootIsPlayer && IsInGuild(_thief) && _thief.Kills > 0)
+            else if (SuspendOnMurder && rootIsPlayer && IsInGuild(_thief) && _thief.Kills > 0 && !bypassSkill)
             {
                 _thief.SendLocalizedMessage(502706); // You are currently suspended from the thieves guild.
             }
@@ -255,6 +261,11 @@ public static class Stealing
             else if (toSteal.Parent is Mobile)
             {
                 _thief.SendLocalizedMessage(1005585); // You cannot steal items which are equipped.
+            }
+            else if (bypassSkill)
+            {
+                stolen = toSteal;
+                _thief.SendMessage("You take the item from the Knocked Out player.");
             }
             else if (root == _thief)
             {
