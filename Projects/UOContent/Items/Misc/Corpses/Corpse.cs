@@ -96,7 +96,7 @@ public partial class Corpse : Container, ICarvable
     /// <summary>Shard-owned pre-transfer corpse restriction; true preserves stock lifting.</summary>
     public static LootEligibilityHandler LootEligibility { get; set; }
 
-    /// <summary>Shard-owned post-transfer observer; stock item movement has completed.</summary>
+    /// <summary>Shard-owned post-transfer observer; stock item use or lift has completed.</summary>
     public static LootResolvedHandler LootResolved { get; set; }
 
     public static readonly TimeSpan MonsterLootRightSacrifice = TimeSpan.FromMinutes(2.0);
@@ -824,6 +824,7 @@ public partial class Corpse : Container, ICarvable
         AddToLooters(from);
 
         _instancedItems?.Remove(item);
+        LootResolved?.Invoke(from, this, item);
     }
 
     public override void GetContextMenuEntries(Mobile from, ref PooledRefList<ContextMenuEntry> list)
