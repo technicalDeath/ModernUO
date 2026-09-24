@@ -197,6 +197,9 @@ public delegate bool LethalDamageHandler(Mobile victim, Mobile from, int amount)
 /// <summary>Optional shard-owned extension to the stock damageability check.</summary>
 public delegate bool CanBeDamagedHandler(Mobile mobile);
 
+/// <summary>Optional shard-owned extension to the stock targetability check.</summary>
+public delegate bool CanTargetHandler(Mobile mobile);
+
 /// <summary>Optional shard-owned interception point for healing before stock hit-point changes.</summary>
 public delegate bool HealHandler(Mobile target, Mobile from, int amount);
 
@@ -1755,7 +1758,7 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
     [CommandProperty(AccessLevel.GameMaster)]
     public bool Mounted => Mount != null;
 
-    public virtual bool CanTarget => true;
+    public virtual bool CanTarget => CanTargetHandler?.Invoke(this) ?? true;
     public virtual bool ClickTitle => true;
 
     public virtual bool PropertyTitle => OldPropertyTitles ? ClickTitle : true;
@@ -1817,6 +1820,8 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
     public static LethalDamageHandler LethalDamageHandler { get; set; }
 
     public static CanBeDamagedHandler CanBeDamagedHandler { get; set; }
+
+    public static CanTargetHandler CanTargetHandler { get; set; }
 
     public static HealHandler HealHandler { get; set; }
 
