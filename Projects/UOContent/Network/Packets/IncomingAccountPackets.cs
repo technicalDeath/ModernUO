@@ -198,6 +198,7 @@ public static class IncomingAccountPackets
         state.BlockAllPackets = true;
 
         CharacterCreation.CharacterCreatedEvent(args);
+        CharacterCreation.CharacterCreatedHandler?.Invoke(args);
 
         var m = args.Mobile;
 

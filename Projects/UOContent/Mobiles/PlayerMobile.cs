@@ -1235,6 +1235,9 @@ namespace Server.Mobiles
         [GeneratedEvent(nameof(PlayerLoginEvent))]
         public static partial void PlayerLoginEvent(PlayerMobile pm);
 
+        /// <summary>Optional shard-owned observer invoked after the stock player-death event.</summary>
+        public static Action<PlayerMobile> PlayerDeathHandler { get; set; }
+
         [OnEvent(nameof(PlayerLoginEvent))]
         public static void OnLogin(PlayerMobile from)
         {
@@ -2592,6 +2595,7 @@ namespace Server.Mobiles
             }
 
             PlayerDeathEvent(this);
+            PlayerDeathHandler?.Invoke(this);
         }
 
         public override bool MutateSpeech(List<Mobile> hears, ref string text, ref object context)

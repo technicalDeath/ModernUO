@@ -16,6 +16,9 @@ public static partial class CharacterCreation
 {
     private static readonly ILogger logger = LogFactory.GetLogger(typeof(CharacterCreation));
 
+    /// <summary>Optional shard-owned observer invoked after stock character creation handlers.</summary>
+    public static Action<CharacterCreatedEventArgs> CharacterCreatedHandler { get; set; }
+
     // Allowed skills that are not race or era specific
     private static readonly HashSet<SkillName> _allowedStartingSkills =
     [
