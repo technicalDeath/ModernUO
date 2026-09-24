@@ -17,6 +17,22 @@ namespace Server.SkillHandlers;
 
 public static class Stealing
 {
+    public delegate bool TheftEligibilityHandler(Mobile thief, Item item, Mobile victim);
+
+    public delegate void TheftResolutionHandler(
+        Mobile thief,
+        Item item,
+        Mobile victim,
+        Item stolen,
+        bool caught
+    );
+
+    /// <summary>Shard-owned pre-transfer restriction; true preserves ordinary stealing.</summary>
+    public static TheftEligibilityHandler TheftEligibility { get; set; }
+
+    /// <summary>Shard-owned post-resolution observer; stock outcome is already committed.</summary>
+    public static TheftResolutionHandler TheftResolved { get; set; }
+
     public static bool ClassicMode { get; private set; }
 
     public static bool SuspendOnMurder { get; private set; }
@@ -87,6 +103,12 @@ public static class Stealing
 
             var root = toSteal.RootParent;
             var mobRoot = root as Mobile;
+
+            if (mobRoot?.Player == true && TheftEligibility?.Invoke(_thief, toSteal, mobRoot) == false)
+            {
+                return null;
+            }
+
             var rootIsPlayer = mobRoot?.Player == true;
 
             var si = toSteal.Parent == null || !toSteal.Movable
@@ -339,11 +361,13 @@ public static class Stealing
             from.RevealingAction();
 
             Item stolen = null;
+            Item targetedItem = null;
             IEntity root = null;
             var caught = false;
 
             if (target is Item item)
             {
+                targetedItem = item;
                 root = item.RootParent;
                 stolen = TryStealItem(item, ref caught);
             }
@@ -354,7 +378,8 @@ public static class Stealing
                 if (pack?.Items.Count > 0)
                 {
                     root = mobile;
-                    stolen = TryStealItem(pack.Items.RandomElement(), ref caught);
+                    targetedItem = pack.Items.RandomElement();
+                    stolen = TryStealItem(targetedItem, ref caught);
                 }
             }
             else
@@ -413,6 +438,8 @@ public static class Stealing
                 pm.PermaFlags.Add(mobRoot);
                 pm.Delta(MobileDelta.Noto);
             }
+
+            TheftResolved?.Invoke(_thief, targetedItem, mobRoot, stolen, caught);
 
             const int TargeterCooldown = 30000; // 30s
             const int SkillCooldown = 10000;    // 10s
