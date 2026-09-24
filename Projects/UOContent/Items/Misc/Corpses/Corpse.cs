@@ -89,6 +89,16 @@ public enum CorpseFlag
 [SerializationGenerator(19, false)]
 public partial class Corpse : Container, ICarvable
 {
+    public delegate bool LootEligibilityHandler(Mobile looter, Corpse corpse, Item item);
+
+    public delegate void LootResolvedHandler(Mobile looter, Corpse corpse, Item item);
+
+    /// <summary>Shard-owned pre-transfer corpse restriction; true preserves stock lifting.</summary>
+    public static LootEligibilityHandler LootEligibility { get; set; }
+
+    /// <summary>Shard-owned post-transfer observer; stock item movement has completed.</summary>
+    public static LootResolvedHandler LootResolved { get; set; }
+
     public static readonly TimeSpan MonsterLootRightSacrifice = TimeSpan.FromMinutes(2.0);
 
     private static TimeSpan InstancedCorpseTime = TimeSpan.FromMinutes(3.0);
@@ -773,6 +783,7 @@ public partial class Corpse : Container, ICarvable
         base.CheckItemUse(from, item) && (item == this || CanLoot(from, item));
 
     public override bool CheckLift(Mobile from, Item item, ref LRReason reject) =>
+        (LootEligibility?.Invoke(from, this, item) != false) &&
         base.CheckLift(from, item, ref reject) && CanLoot(from, item);
 
     public override void OnItemUsed(Mobile from, Item item)
@@ -792,6 +803,7 @@ public partial class Corpse : Container, ICarvable
         AddToLooters(from);
 
         _instancedItems?.Remove(item);
+        LootResolved?.Invoke(from, this, item);
 
     }
 
