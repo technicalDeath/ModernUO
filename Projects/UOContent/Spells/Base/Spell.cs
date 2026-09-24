@@ -474,6 +474,11 @@ namespace Server.Spells
                 return false;
             }
 
+            if (!Caster.CanPerformAction())
+            {
+                return false;
+            }
+
             var isCasting = Caster.Spell?.IsCasting == true;
             var isWand = Scroll is BaseWand;
 

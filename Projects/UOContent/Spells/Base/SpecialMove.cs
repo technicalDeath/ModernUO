@@ -216,6 +216,11 @@ namespace Server.Spells
 
         public static bool SetCurrentMove(Mobile m, SpecialMove move)
         {
+            if (!m.CanPerformAction())
+            {
+                return false;
+            }
+
             if (!Core.SE)
             {
                 ClearCurrentMove(m);

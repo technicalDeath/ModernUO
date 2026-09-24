@@ -206,6 +206,9 @@ public delegate bool HealHandler(Mobile target, Mobile from, int amount);
 /// <summary>Optional shard-owned interception point for curing poison.</summary>
 public delegate bool CurePoisonHandler(Mobile target, Mobile from);
 
+/// <summary>Optional shard-owned gate for player actions such as movement, item use, and combat.</summary>
+public delegate bool ActionCheckHandler(Mobile mobile);
+
 public delegate bool AdditionalMurdererHandler(Mobile mobile);
 
 public delegate Container CreateCorpseHandler(
@@ -1759,6 +1762,8 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
     public bool Mounted => Mount != null;
 
     public virtual bool CanTarget => CanTargetHandler?.Invoke(this) ?? true;
+
+    public virtual bool CanPerformAction() => ActionCheckHandler?.Invoke(this) ?? true;
     public virtual bool ClickTitle => true;
 
     public virtual bool PropertyTitle => OldPropertyTitles ? ClickTitle : true;
@@ -1826,6 +1831,8 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
     public static HealHandler HealHandler { get; set; }
 
     public static CurePoisonHandler CurePoisonHandler { get; set; }
+
+    public static ActionCheckHandler ActionCheckHandler { get; set; }
 
     /// <summary>Optional shard-owned red-status extension, evaluated in addition to Kills.</summary>
     public static AdditionalMurdererHandler AdditionalMurdererHandler { get; set; }
@@ -3802,13 +3809,19 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
 
     public virtual void Attack(Mobile m)
     {
+        if (!CanPerformAction())
+        {
+            return;
+        }
+
         if (CheckAttack(m))
         {
             Combatant = m;
         }
     }
 
-    public virtual bool CheckAttack(Mobile m) => Utility.InUpdateRange(Location, m.Location) && CanSee(m) && InLOS(m);
+    public virtual bool CheckAttack(Mobile m) => CanPerformAction() &&
+                                                 Utility.InUpdateRange(Location, m.Location) && CanSee(m) && InLOS(m);
 
     /// <summary>
     ///     Overridable. Virtual event invoked after the <see cref="Combatant" /> property has changed.
@@ -4138,6 +4151,11 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
 
     private bool InternalOnMove(Direction d)
     {
+        if (!CanPerformAction())
+        {
+            return false;
+        }
+
         if (!OnMove(d))
         {
             return false;
@@ -4981,7 +4999,7 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
 
     public virtual void Use(Item item)
     {
-        if (item?.Deleted != false || item.QuestItem || Deleted)
+        if (item?.Deleted != false || item.QuestItem || Deleted || !CanPerformAction())
         {
             return;
         }
@@ -5054,7 +5072,7 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
 
     public virtual void Use(Mobile m)
     {
-        if (m?.Deleted != false || Deleted)
+        if (m?.Deleted != false || Deleted || !CanPerformAction())
         {
             return;
         }
@@ -5096,6 +5114,12 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
 
         var from = this;
         var state = m_NetState;
+
+        if (!CanPerformAction())
+        {
+            state?.SendLiftReject(reject);
+            return;
+        }
 
         if (from.AccessLevel >= AccessLevel.GameMaster || Core.TickCount - from.NextActionTime >= 0)
         {
@@ -5385,6 +5409,11 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
         var from = this;
         var item = from.Holding;
 
+        if (!CanPerformAction())
+        {
+            return false;
+        }
+
         var valid = item != null && item.HeldBy == from && item.Map == Map.Internal;
 
         from.Holding = null;
@@ -5422,6 +5451,11 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
         var from = this;
         var item = from.Holding;
 
+        if (!CanPerformAction())
+        {
+            return false;
+        }
+
         var valid = item != null && item.HeldBy == from && item.Map == Map.Internal;
 
         from.Holding = null;
@@ -5458,6 +5492,11 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
     {
         var from = this;
         var item = from.Holding;
+
+        if (!CanPerformAction())
+        {
+            return false;
+        }
 
         var valid = item != null && item.HeldBy == from && item.Map == Map.Internal;
 

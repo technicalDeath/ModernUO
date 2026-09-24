@@ -772,7 +772,7 @@ public class Skills
 
     public static bool UseSkill(Mobile from, int skillID)
     {
-        if (!from.CheckAlive())
+        if (!from.CanPerformAction() || !from.CheckAlive())
         {
             return false;
         }
