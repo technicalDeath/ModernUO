@@ -191,6 +191,8 @@ public delegate bool AllowBeneficialHandler(Mobile from, Mobile target);
 
 public delegate bool AllowHarmfulHandler(Mobile from, Mobile target);
 
+public delegate bool AdditionalMurdererHandler(Mobile mobile);
+
 public delegate Container CreateCorpseHandler(
     Mobile from, List<Item> initialContent, List<Item> equippedItems
 );
@@ -1685,7 +1687,7 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
         }
     }
 
-    public virtual bool Murderer => Kills >= 5;
+    public virtual bool Murderer => Kills >= 5 || AdditionalMurdererHandler?.Invoke(this) == true;
 
     [CommandProperty(AccessLevel.Counselor, AccessLevel.GameMaster)]
     public virtual bool Criminal
@@ -1798,6 +1800,9 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
     public static AllowBeneficialHandler AllowBeneficialHandler { get; set; }
 
     public static AllowHarmfulHandler AllowHarmfulHandler { get; set; }
+
+    /// <summary>Optional shard-owned red-status extension, evaluated in addition to Kills.</summary>
+    public static AdditionalMurdererHandler AdditionalMurdererHandler { get; set; }
 
     public static SkillCheckTargetHandler SkillCheckTargetHandler { get; set; }
 

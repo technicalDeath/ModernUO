@@ -37,6 +37,14 @@ public class PlayerMurderSystem : GenericPersistence
 
     public static bool BountiesEnabled { get; private set; }
 
+    /// <summary>
+    /// Whether the legacy victim-report/short-term murder flow is accepting reports and decaying
+    /// its contexts. Shard-owned adjudicators can disable this before installing their own hook.
+    /// </summary>
+    public static bool LegacyReportingEnabled { get; private set; } = true;
+
+    public static void SetLegacyReportingEnabled(bool enabled) => LegacyReportingEnabled = enabled;
+
     private static TimeSpan _bountyExpiry;
 
     public static void Configure()
@@ -259,6 +267,11 @@ public class PlayerMurderSystem : GenericPersistence
 
     public static void OnPlayerMurder(PlayerMobile player)
     {
+        if (!LegacyReportingEnabled)
+        {
+            return;
+        }
+
         var context = GetOrCreateMurderContext(player);
         context.ShortTermMurders++;
         player.Kills++;
@@ -278,6 +291,11 @@ public class PlayerMurderSystem : GenericPersistence
 
     public static bool ReportMurder(PlayerMobile reporter, Mobile killer)
     {
+        if (!LegacyReportingEnabled)
+        {
+            return false;
+        }
+
         if (killer?.Deleted != false || killer is not PlayerMobile pk)
         {
             return false;
@@ -397,6 +415,11 @@ public class PlayerMurderSystem : GenericPersistence
 
         protected override void OnTick()
         {
+            if (!LegacyReportingEnabled)
+            {
+                return;
+            }
+
             if (_contextTerms.Count == 0)
             {
                 return;

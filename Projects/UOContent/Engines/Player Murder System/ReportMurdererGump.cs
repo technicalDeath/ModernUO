@@ -22,6 +22,11 @@ public class ReportMurdererGump : StaticGump<ReportMurdererGump>
     [OnEvent(nameof(PlayerMobile.PlayerDeathEvent))]
     public static void OnPlayerDeathEvent(PlayerMobile m)
     {
+        if (!PlayerMurderSystem.LegacyReportingEnabled)
+        {
+            return;
+        }
+
         List<Mobile> killers = null;
         HashSet<Mobile> toGive = null;
 
