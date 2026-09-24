@@ -402,6 +402,14 @@ public partial class Corpse : Container, ICarvable
     [CommandProperty(AccessLevel.GameMaster)]
     public bool OwnerWasAnimatedDead => GetFlag(CorpseFlag.OwnerWasAnimatedDead);
 
+    /// <summary>
+    /// Snapshot of the player mobiles that held monster-corpse looting rights when this corpse
+    /// was created. The list is retained with the corpse so shard-owned post-transfer policies can
+    /// key durable decisions to the actual rights holder even after the dead creature is deleted.
+    /// Player corpses intentionally expose an empty list.
+    /// </summary>
+    public IReadOnlyList<Mobile> MonsterLootRights => OwnerWasBaseCreature ? _aggressors : Array.Empty<Mobile>();
+
     public override bool DisplaysContent => false;
 
     public void Carve(Mobile from, Item item)

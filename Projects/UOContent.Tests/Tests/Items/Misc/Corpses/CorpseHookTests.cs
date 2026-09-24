@@ -40,4 +40,26 @@ public sealed class CorpseHookTests
 
         Assert.Equal(1, calls);
     }
+
+    [Fact]
+    public void MonsterCorpseExposesSnapshotLootRights()
+    {
+        var owner = new Rabbit();
+        var attacker = new Mobile { Player = true };
+
+        try
+        {
+            owner.RegisterDamage(100, attacker);
+            var corpse = new Corpse(owner, owner.Items);
+
+            Assert.Contains(attacker, corpse.MonsterLootRights);
+
+            corpse.Delete();
+        }
+        finally
+        {
+            owner.Delete();
+            attacker.Delete();
+        }
+    }
 }
