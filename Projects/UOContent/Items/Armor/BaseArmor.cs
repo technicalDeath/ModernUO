@@ -557,7 +557,7 @@ namespace Server.Items
             if (Quality == ArmorQuality.Exceptional)
             {
                 // Guessed Core.ML removed exceptional resist bonuses from crafted shields
-                if (!(Core.ML && this is BaseShield))
+                if (Core.AOS && !(Core.ML && this is BaseShield))
                 {
                     DistributeBonuses(
                         tool is BaseRunicTool ? 6 :
@@ -910,7 +910,7 @@ namespace Server.Items
 
                 if (item is BaseArmor armor)
                 {
-                    if (!armor.CheckRace(m))
+                    if (!Server.Misc.CosmeticElfPolicy.CheckRace(armor, m))
                     {
                         m.AddToBackpack(armor);
                     }
@@ -1064,7 +1064,7 @@ namespace Server.Items
                 return false;
             }
 
-            if (!CheckRace(from))
+            if (!Server.Misc.CosmeticElfPolicy.CheckRace(this, from))
             {
                 return false;
             }

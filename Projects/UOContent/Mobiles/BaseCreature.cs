@@ -4607,7 +4607,14 @@ namespace Server.Mobiles
                 return false;
             }
 
-            return Core.AOS || skill != SkillName.Focus && skill != SkillName.Chivalry && skill != SkillName.Necromancy;
+            return skill switch
+            {
+                SkillName.Focus or SkillName.Chivalry or SkillName.Necromancy => Core.AOS,
+                SkillName.Bushido or SkillName.Ninjitsu => Core.SE,
+                SkillName.Spellweaving => Core.ML,
+                SkillName.Mysticism or SkillName.Imbuing or SkillName.Throwing => Core.SA,
+                _ => true
+            };
         }
 
         public virtual TeachResult CheckTeachSkills(

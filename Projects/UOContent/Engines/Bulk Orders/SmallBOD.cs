@@ -124,6 +124,12 @@ public abstract partial class SmallBOD : BaseBOD
             from.SendLocalizedMessage(1045166);
             return;
         }
+        if (item.Nontransferable)
+        {
+            // Bound issued equipment must not become a deed reward or erase its provenance.
+            from.SendLocalizedMessage(1045169);
+            return;
+        }
         var armor = item as BaseArmor;
         var clothing = item as BaseClothing;
         var weapon = item as BaseWeapon;

@@ -56,7 +56,7 @@ namespace Server.SkillHandlers
 
                     var startTimer = false;
 
-                    if (targeted is Food or FukiyaDarts or Shuriken)
+                    if (targeted is Food || (Core.SE && targeted is FukiyaDarts or Shuriken))
                     {
                         startTimer = true;
                     }

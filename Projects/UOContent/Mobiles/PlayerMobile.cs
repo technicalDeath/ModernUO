@@ -99,6 +99,7 @@ namespace Server.Mobiles
 
     public partial class PlayerMobile : Mobile, IHonorTarget, IHasSteps
     {
+        public static event Action<PlayerMobile> PositionChanged;
         private static bool m_NoRecursion;
 
         private static readonly Point3D[] m_TrammelDeathDestinations =
@@ -193,6 +194,12 @@ namespace Server.Mobiles
         private DateTime[] m_StuckMenuUses;
 
         private QuestArrow m_QuestArrow;
+
+        // Stored with the player's active skills in the same world-save record.
+        public string SkillBankData { get; set; }
+
+        // Preserves the first invalid Skill Bank payload when staff recovers the ledger.
+        public string SkillBankRecoveryArchive { get; set; }
 
         public PlayerMobile()
         {
@@ -1368,7 +1375,7 @@ namespace Server.Mobiles
                         {
                             drop = true;
                         }
-                        else if (!weapon.CheckRace(Race))
+                        else if (!Race.IsAllowedRace(CosmeticElfPolicy.GameplayRace(this), weapon.RequiredRaces))
                         {
                             drop = true;
                         }
@@ -1393,7 +1400,7 @@ namespace Server.Mobiles
                         {
                             drop = true;
                         }
-                        else if (!armor.CheckRace(Race))
+                        else if (!Race.IsAllowedRace(CosmeticElfPolicy.GameplayRace(this), armor.RequiredRaces))
                         {
                             drop = true;
                         }
@@ -1446,7 +1453,8 @@ namespace Server.Mobiles
                         {
                             drop = true;
                         }
-                        else if (clothing.RequiredRace != null && clothing.RequiredRace != Race)
+                        else if (clothing.RequiredRace != null && clothing.RequiredRace != CosmeticElfPolicy.GameplayRace(this) ||
+                                 !Race.IsAllowedRace(CosmeticElfPolicy.GameplayRace(this), clothing.RequiredRaces))
                         {
                             drop = true;
                         }
@@ -2185,7 +2193,11 @@ namespace Server.Mobiles
             {
                 if (message)
                 {
-                    if (msgNum == 1154111)
+                    if (msgNum == -1)
+                    {
+                        SendMessage("You cannot trade an item that contains nontransferable items.");
+                    }
+                    else if (msgNum == 1154111)
                     {
                         SendLocalizedMessage(msgNum, to.Name);
                     }
@@ -2203,6 +2215,11 @@ namespace Server.Mobiles
 
         private static int CheckContentForTrade(Item item)
         {
+            if (item.Nontransferable)
+            {
+                return -1;
+            }
+
             if (item is TrappableContainer container && container.TrapType != TrapType.None)
             {
                 return 1004044; // You may not trade trapped items.
@@ -2261,6 +2278,7 @@ namespace Server.Mobiles
         protected override void OnLocationChange(Point3D oldLocation)
         {
             CheckLightLevels(false);
+            PositionChanged?.Invoke(this);
 
             DuelContext?.OnLocationChanged(this);
 
@@ -2315,6 +2333,8 @@ namespace Server.Mobiles
 
         protected override void OnMapChange(Map oldMap)
         {
+            PositionChanged?.Invoke(this);
+
             if (Map != Faction.Facet && oldMap == Faction.Facet || Map == Faction.Facet && oldMap != Faction.Facet)
             {
                 InvalidateProperties();
@@ -2776,6 +2796,16 @@ namespace Server.Mobiles
 
             switch (version)
             {
+                case 35:
+                    {
+                        SkillBankData = reader.ReadString();
+                        goto case 34;
+                    }
+                case 36:
+                    {
+                        SkillBankRecoveryArchive = reader.ReadString();
+                        goto case 35;
+                    }
                 case 34: // Acquired Recipes is now a Set
                 case 33: // Removes champion title
                 case 32: // Removes virtue properties
@@ -3123,7 +3153,9 @@ namespace Server.Mobiles
         {
             base.Serialize(writer);
 
-            writer.Write(34); // version
+            writer.Write(36); // version
+            writer.Write(SkillBankRecoveryArchive);
+            writer.Write(SkillBankData);
 
             if (Stabled == null)
             {

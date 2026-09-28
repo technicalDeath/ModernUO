@@ -81,7 +81,7 @@ public partial class Fukiya : Item, INinjaWeapon
     {
         base.GetContextMenuEntries(from, ref list);
 
-        if (IsChildOf(from))
+        if (Core.SE && IsChildOf(from))
         {
             list.Add(new NinjaWeapon.LoadEntry(6224));
             list.Add(new NinjaWeapon.UnloadEntry(6225, UsesRemaining > 0));

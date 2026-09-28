@@ -84,7 +84,7 @@ public partial class StatCapScroll : SpecialScroll
 
     public override bool CanUse(Mobile from)
     {
-        if (!base.CanUse(from))
+        if (!Core.AOS || !base.CanUse(from))
         {
             return false;
         }

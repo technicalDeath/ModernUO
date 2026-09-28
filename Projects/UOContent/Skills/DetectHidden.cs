@@ -32,7 +32,7 @@ public static class DetectHidden
         src.SendLocalizedMessage(500819); // Where will you search?
         src.Target = new InternalTarget();
 
-        return TimeSpan.FromSeconds(30.0);
+        return TimeSpan.FromSeconds(Core.Expansion == Expansion.UOR ? 1.0 : 30.0);
     }
 
     // Clean up old debounce entries to prevent memory bloat

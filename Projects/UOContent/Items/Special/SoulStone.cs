@@ -133,7 +133,7 @@ public partial class SoulStone : Item, ISecurable
 
     protected virtual bool CheckUse(Mobile from)
     {
-        if (Deleted || !IsAccessibleTo(from))
+        if (!Core.AOS || Deleted || !IsAccessibleTo(from))
         {
             return false;
         }

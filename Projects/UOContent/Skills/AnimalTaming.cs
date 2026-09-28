@@ -154,7 +154,7 @@ namespace Server.SkillHandlers
                     return;
                 }
 
-                if (creature is CuSidhe && from.Race != Race.Elf)
+                if (creature is CuSidhe && Server.Misc.CosmeticElfPolicy.GameplayRace(from) != Race.Elf)
                 {
                     // You can't tame that!
                     creature.PrivateOverheadMessage(MessageType.Regular, 0x3B2, 502801, from.NetState);

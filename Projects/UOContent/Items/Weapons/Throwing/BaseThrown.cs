@@ -50,6 +50,17 @@ public abstract partial class BaseThrown : BaseRanged
     public override SkillName DefSkill => SkillName.Throwing;
     public override SkillName AccuracySkill => SkillName.Throwing;
 
+    public override bool CanEquip(Mobile from)
+    {
+        if (!Core.SA)
+        {
+            from.SendMessage("Throwing weapons are unavailable in this era.");
+            return false;
+        }
+
+        return base.CanEquip(from);
+    }
+
     public override WeaponAnimation DefAnimation => WeaponAnimation.Throwing;
 
     // Throwing-specific hit chance modifiers (applied via BaseWeapon.ModifyHitChance hook).

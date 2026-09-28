@@ -66,7 +66,18 @@ public partial class OilCloth : Item, IScissorable, IDyable
         }
         else if (obj is BaseWeapon weapon)
         {
-            if (weapon.Poison == null || weapon.PoisonCharges <= 0)
+            if (Core.UOR && !Core.AOS)
+            {
+                if (weapon.CleanPoisonCorrosion())
+                {
+                    from.SendLocalizedMessage(1010497); // You have cleaned the item.
+                }
+                else
+                {
+                    from.LocalOverheadMessage(MessageType.Regular, 0x3B2, 1005422);
+                }
+            }
+            else if (weapon.Poison == null || weapon.PoisonCharges <= 0)
             {
                 // Hmmmm... this does not need to be cleaned.
                 from.LocalOverheadMessage(MessageType.Regular, 0x3B2, 1005422);

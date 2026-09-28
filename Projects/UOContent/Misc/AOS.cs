@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ModernUO.Serialization;
 using Server.Items;
+using Server.Misc;
 using Server.Mobiles;
 using Server.Spells;
 using Server.Spells.Fifth;
@@ -1347,7 +1348,7 @@ namespace Server
 
             for (var i = 0; i < 5; ++i)
             {
-                if (!GetValues(i, out var skill, out var bonus))
+                if (!GetValues(i, out var skill, out var bonus) || !SkillCheck.IsSkillAvailable(skill))
                 {
                     continue;
                 }

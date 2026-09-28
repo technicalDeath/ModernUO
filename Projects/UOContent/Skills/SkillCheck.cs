@@ -41,6 +41,11 @@ public static class SkillCheck
 
     public static bool Mobile_SkillCheckLocation(Mobile from, SkillName skillName, double minSkill, double maxSkill)
     {
+        if (!IsSkillAvailable(skillName))
+        {
+            return false;
+        }
+
         var skill = from.Skills[skillName];
 
         if (skill == null)
@@ -76,6 +81,11 @@ public static class SkillCheck
 
     public static bool Mobile_SkillCheckDirectLocation(Mobile from, SkillName skillName, double chance)
     {
+        if (!IsSkillAvailable(skillName))
+        {
+            return false;
+        }
+
         var skill = from.Skills[skillName];
 
         if (skill == null)
@@ -107,7 +117,7 @@ public static class SkillCheck
 
     public static bool CheckSkill(Mobile from, Skill skill, object amObj, double chance)
     {
-        if (from.Skills.Cap == 0)
+        if (!IsSkillAvailable(skill.SkillName) || from.Skills.Cap == 0)
         {
             return false;
         }
@@ -119,7 +129,13 @@ public static class SkillCheck
         {
             if (skill.Base < 10.0) // Gain regardless of the AllowGain check
             {
-                Gain(from, skill);
+                // Bank restoration still requires the ordinary anti-macro boundary, while
+                // stock sub-10 gains retain their legacy unconditional behavior.
+                var eligible = AllowGain(from, skill, amObj);
+                if (!eligible || !SkillEvents.InvokeSkillGainOverride(from, skill, success))
+                {
+                    Gain(from, skill, organicAttempt: eligible);
+                }
             }
             else if (AllowGain(from, skill, amObj))
             {
@@ -146,7 +162,7 @@ public static class SkillCheck
 
                     if (gc >= Utility.RandomDouble())
                     {
-                        Gain(from, skill);
+                        Gain(from, skill, organicAttempt: true);
                     }
                 }
             }
@@ -166,6 +182,11 @@ public static class SkillCheck
         double maxSkill
     )
     {
+        if (!IsSkillAvailable(skillName))
+        {
+            return false;
+        }
+
         var skill = from.Skills[skillName];
 
         if (skill == null)
@@ -199,6 +220,11 @@ public static class SkillCheck
 
     public static bool Mobile_SkillCheckDirectTarget(Mobile from, SkillName skillName, object target, double chance)
     {
+        if (!IsSkillAvailable(skillName))
+        {
+            return false;
+        }
+
         var skill = from.Skills[skillName];
 
         if (skill == null)
@@ -236,8 +262,23 @@ public static class SkillCheck
         return from is not PlayerMobile mobile || AntiMacroSystem.AntiMacroCheck(mobile, skill, obj);
     }
 
-    public static void Gain(Mobile from, Skill skill)
+    public static bool IsSkillAvailable(SkillName skillName) => skillName switch
     {
+        < SkillName.Necromancy => true,
+        <= SkillName.Chivalry => Core.AOS,
+        <= SkillName.Ninjitsu => Core.SE,
+        SkillName.Spellweaving => Core.ML,
+        <= SkillName.Throwing => Core.SA,
+        _ => false
+    };
+
+    public static void Gain(Mobile from, Skill skill, bool organicAttempt = false)
+    {
+        if (!IsSkillAvailable(skill.SkillName))
+        {
+            return;
+        }
+
         if (from is BaseCreature { IsDeadPet: true })
         {
             return;
@@ -258,6 +299,8 @@ public static class SkillCheck
             }
 
             var skills = from.Skills;
+            Skill displacedSkill = null;
+            var displacedTenths = 0;
 
             if (from.Player && skills.Total / (double)skills.Cap >= Utility.RandomDouble())
             {
@@ -267,7 +310,10 @@ public static class SkillCheck
 
                     if (toLower != skill && toLower.Lock == SkillLock.Down && toLower.BaseFixedPoint >= toGain)
                     {
+                        var previousBase = toLower.BaseFixedPoint;
                         toLower.BaseFixedPoint = Math.Max(toLower.BaseFixedPoint - toGain, 0);
+                        displacedTenths = previousBase - toLower.BaseFixedPoint;
+                        displacedSkill = toLower;
                         break;
                     }
                 }
@@ -280,7 +326,12 @@ public static class SkillCheck
 
             if (!from.Player || skills.Total < skills.Cap)
             {
+                var previousBase = skill.BaseFixedPoint;
                 skill.BaseFixedPoint = Math.Min(skill.BaseFixedPoint + toGain, skill.CapFixedPoint);
+                if (organicAttempt && skill.BaseFixedPoint > previousBase && displacedTenths > 0)
+                {
+                    SkillEvents.InvokeSkillDisplaced(from, displacedSkill, displacedTenths);
+                }
             }
         }
 

@@ -43,6 +43,12 @@
 /Distribution/ref
 /Distribution/web
 
+# Britannia Renaissance runtime output: world-state archives, deploy-generated world data
+# (ShardContent/tools/Prepare-Alpha2bWorldData.ps1) and the generated world-generation settings.
+/Distribution/WorldStateArchive
+/Distribution/Data/BritanniaRenaissance
+/Distribution/Configuration/alpha2b-world-generation.json
+
 /Projects/*/obj
 /Projects/*/bin
 /Projects/*/Generated

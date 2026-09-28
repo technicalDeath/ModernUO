@@ -172,6 +172,11 @@ public static class NinjaWeapon
 
     private static bool CanUseWeapon(PlayerMobile from, INinjaWeapon weapon)
     {
+        if (!Core.SE)
+        {
+            return false;
+        }
+
         if (WeaponIsValid(weapon, from))
         {
             if (weapon.UsesRemaining > 0)
@@ -276,7 +281,7 @@ public static class NinjaWeapon
 
     private static void OnHit(Mobile from, Mobile target, INinjaWeapon weapon)
     {
-        if (!from.CanBeHarmful(target))
+        if (!Core.SE || !from.CanBeHarmful(target))
         {
             return;
         }
@@ -307,7 +312,7 @@ public static class NinjaWeapon
 
     private static void OnTarget(Mobile from, object targeted, INinjaWeapon weapon)
     {
-        if (from is PlayerMobile player && WeaponIsValid(weapon, from))
+        if (Core.SE && from is PlayerMobile player && WeaponIsValid(weapon, from))
         {
             if (targeted is Mobile mobile)
             {
@@ -335,7 +340,7 @@ public static class NinjaWeapon
 
         public override void OnClick(Mobile from, IEntity target)
         {
-            if (target is INinjaWeapon weapon && WeaponIsValid(weapon, from))
+            if (Core.SE && target is INinjaWeapon weapon && WeaponIsValid(weapon, from))
             {
                 from.BeginTarget(10, false, TargetFlags.Harmful, OnTarget, weapon);
             }
@@ -348,7 +353,7 @@ public static class NinjaWeapon
 
         public override void OnClick(Mobile from, IEntity target)
         {
-            if (target is INinjaWeapon weapon && WeaponIsValid(weapon, from))
+            if (Core.SE && target is INinjaWeapon weapon && WeaponIsValid(weapon, from))
             {
                 Unload(from, weapon);
             }

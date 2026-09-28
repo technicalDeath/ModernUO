@@ -60,7 +60,7 @@ public static class AntiMacroSystem
         false, // Fencing = 42,
         false, // Wrestling = 43,
         true,  // Lumberjacking = 44,
-        true,  // Mining = 45,
+        false, // Mining = 45, Renaissance publish exempts Mining from anti-macro checks.
         true,  // Meditation = 46,
         true,  // Stealth = 47,
         true,  // RemoveTrap = 48,

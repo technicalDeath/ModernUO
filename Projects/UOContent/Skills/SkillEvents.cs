@@ -25,6 +25,12 @@ public static class SkillEvents
     /// </summary>
     public static event Action<Mobile, Skill, bool> SkillUsed;
 
+    /// <summary>
+    /// Raised after a skill-check gain actually displaces another skill through the stock cap rule.
+    /// The amount is the exact decrease in the displaced skill's BaseFixedPoint, in tenths.
+    /// </summary>
+    public static event Action<Mobile, Skill, int> SkillDisplaced;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void InvokeSkillUsed(Mobile from, Skill skill, bool success) =>
         SkillUsed?.Invoke(from, skill, success);
@@ -32,4 +38,8 @@ public static class SkillEvents
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool InvokeSkillGainOverride(Mobile from, Skill skill, bool success) =>
         SkillGainOverride?.Invoke(from, skill, success) == true;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void InvokeSkillDisplaced(Mobile from, Skill displaced, int lostTenths) =>
+        SkillDisplaced?.Invoke(from, displaced, lostTenths);
 }

@@ -29,7 +29,7 @@ namespace Server.Mobiles
 
         public override Item CreateBulkOrder(Mobile from, bool fromContextMenu)
         {
-            if (from is PlayerMobile pm && pm.NextTailorBulkOrder == TimeSpan.Zero &&
+            if (Core.AOS && from is PlayerMobile pm && pm.NextTailorBulkOrder == TimeSpan.Zero &&
                 (fromContextMenu || Utility.RandomDouble() < 0.2))
             {
                 var theirSkill = pm.Skills.Tailoring.Base;
@@ -52,9 +52,10 @@ namespace Server.Mobiles
             return null;
         }
 
-        public override bool IsValidBulkOrder(Item item) => item is SmallTailorBOD or LargeTailorBOD;
+        public override bool IsValidBulkOrder(Item item) => Core.AOS && item is SmallTailorBOD or LargeTailorBOD;
 
-        public override bool SupportsBulkOrders(Mobile from) => from is PlayerMobile && from.Skills.Tailoring.Base > 0;
+        public override bool SupportsBulkOrders(Mobile from) =>
+            from is PlayerMobile && Core.AOS && from.Skills.Tailoring.Base > 0;
 
         public override TimeSpan GetNextBulkOrder(Mobile from)
         {

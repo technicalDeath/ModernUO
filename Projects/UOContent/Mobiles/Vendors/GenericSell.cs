@@ -4,6 +4,32 @@ using Server.Items;
 
 namespace Server.Mobiles
 {
+    internal static class NontransferableItemPolicy
+    {
+        public static bool Contains(Item item)
+        {
+            if (item.Nontransferable)
+            {
+                return true;
+            }
+
+            if (item is not Container container)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < container.Items.Count; i++)
+            {
+                if (Contains(container.Items[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
     public class GenericSellInfo : IShopSellInfo
     {
         private readonly Dictionary<Type, int> m_Table = new();
@@ -98,9 +124,9 @@ namespace Server.Mobiles
 
         public string GetNameFor(Item item) => item.Name ?? item.LabelNumber.ToString();
 
-        public bool IsSellable(Item item) => !item.Nontransferable && IsInList(item.GetType());
+        public bool IsSellable(Item item) => !NontransferableItemPolicy.Contains(item) && IsInList(item.GetType());
 
-        public bool IsResellable(Item item) => !item.Nontransferable && IsInList(item.GetType());
+        public bool IsResellable(Item item) => !NontransferableItemPolicy.Contains(item) && IsInList(item.GetType());
 
         public void Add(Type type, int price)
         {

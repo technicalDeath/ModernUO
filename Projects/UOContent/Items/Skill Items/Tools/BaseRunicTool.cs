@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using ModernUO.Serialization;
+using Server.Misc;
 
 namespace Server.Items;
 
@@ -186,7 +187,8 @@ public abstract partial class BaseRunicTool : BaseTool
         var isSpellBook = attrs.Owner is Spellbook;
         var possibleSkills =
             new List<SkillName>(isSpellBook ? m_PossibleSpellbookSkills : m_PossibleBonusSkills);
-        var count = Core.SE || isSpellBook ? possibleSkills.Count : possibleSkills.Count - 2;
+        possibleSkills.RemoveAll(skill => !SkillCheck.IsSkillAvailable(skill));
+        var count = possibleSkills.Count;
 
         SkillName sk;
         bool found;

@@ -37,6 +37,8 @@ namespace Server.Items
                     defender.ApplyPoison(attacker, Poison);
                 }
             }
+
+            ApplyPoisonCorrosionOnHit(attacker);
         }
     }
 }

@@ -19,6 +19,11 @@ public partial class EggBomb : Item
 
     public override void OnDoubleClick(Mobile from)
     {
+        if (!Core.SE)
+        {
+            return;
+        }
+
         if (!IsChildOf(from.Backpack))
         {
             // The item must be in your backpack to use it.

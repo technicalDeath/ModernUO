@@ -86,7 +86,7 @@ namespace Server.Mobiles
 
         public override void OnDoubleClick(Mobile from)
         {
-            if (from.Race != Race.Elf && from == ControlMaster && from.AccessLevel == AccessLevel.Player)
+            if (Server.Misc.CosmeticElfPolicy.GameplayRace(from) != Race.Elf && from == ControlMaster && from.AccessLevel == AccessLevel.Player)
             {
                 var pads = from.FindItemOnLayer(Layer.Shoes);
 

@@ -1977,8 +1977,19 @@ public class HousePlacementEntry
         }
 
         var center = prevHouse.Location;
+        var map = prevHouse.Map;
 
         prevHouse.Delete();
+
+        CompletePlacement(from, map, center, null);
+    }
+
+    private void CompletePlacement(Mobile from, Map map, Point3D center, int? confirmedPremium)
+    {
+        if (!from.CheckAlive() || from.Backpack?.FindItemByType<HousePlacementTool>() == null || from.Map != map)
+        {
+            return;
+        }
 
         var res = HousePlacement.Check(from, MultiID, center, out var toMove, HouseDirection);
 
@@ -1992,6 +2003,37 @@ public class HousePlacementEntry
                     }
                     else
                     {
+                        if (!HousePlacement.TryGetPlacementPremium(from, MultiID, center, Cost, out var premium))
+                        {
+                            from.SendMessage("This house's placement price could not be confirmed. Please try again.");
+                            return;
+                        }
+
+                        if (confirmedPremium is null && premium > 0)
+                        {
+                            from.SendGump(new WarningGump(
+                                $"Rural placement adds a non-refundable premium of {premium:N0} gold. " +
+                                $"The house costs {Cost:N0} gold; {Cost + premium:N0} gold will be withdrawn now. " +
+                                "The premium is not returned by demolition, re-deeding, or transfer. Continue?",
+                                440,
+                                240,
+                                okay =>
+                                {
+                                    if (okay)
+                                    {
+                                        CompletePlacement(from, map, center, premium);
+                                    }
+                                }
+                            ));
+                            return;
+                        }
+
+                        if (confirmedPremium is not null && confirmedPremium != premium)
+                        {
+                            from.SendMessage("The rural placement price changed. Please target the land again.");
+                            return;
+                        }
+
                         var house = ConstructHouse(from);
 
                         if (house == null)
@@ -2007,10 +2049,10 @@ public class HousePlacementEntry
                                 $"{Cost} gold would have been withdrawn from your bank if you were not a GM."
                             );
                         }
-                        else if (Banker.Withdraw(from, Cost))
+                        else if (Banker.Withdraw(from, Cost + premium))
                         {
                             // ~1_AMOUNT~ gold has been withdrawn from your bank box.
-                            from.SendLocalizedMessage(1060398, Cost.ToString());
+                            from.SendLocalizedMessage(1060398, (Cost + premium).ToString());
                         }
                         else
                         {

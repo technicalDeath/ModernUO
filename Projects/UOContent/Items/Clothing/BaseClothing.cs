@@ -422,7 +422,7 @@ namespace Server.Items
                 return false;
             }
 
-            if (RequiredRace != null && from.Race != RequiredRace)
+            if (RequiredRace != null && Server.Misc.CosmeticElfPolicy.GameplayRace(from) != RequiredRace)
             {
                 if (RequiredRace == Race.Elf)
                 {
@@ -433,6 +433,11 @@ namespace Server.Items
                     from.SendMessage($"Only {RequiredRace.PluralName} may use this.");
                 }
 
+                return false;
+            }
+
+            if (!Server.Misc.CosmeticElfPolicy.CheckRace(this, from))
+            {
                 return false;
             }
 
@@ -533,7 +538,8 @@ namespace Server.Items
 
                 if (item is BaseClothing clothing)
                 {
-                    if (clothing.RequiredRace != null && m.Race != clothing.RequiredRace)
+                    if (clothing.RequiredRace != null && Server.Misc.CosmeticElfPolicy.GameplayRace(m) != clothing.RequiredRace ||
+                        !Race.IsAllowedRace(Server.Misc.CosmeticElfPolicy.GameplayRace(m), clothing.RequiredRaces))
                     {
                         if (clothing.RequiredRace == Race.Elf)
                         {

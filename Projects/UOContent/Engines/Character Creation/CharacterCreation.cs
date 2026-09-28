@@ -19,6 +19,9 @@ public static partial class CharacterCreation
     /// <summary>Optional shard-owned observer invoked after stock character creation handlers.</summary>
     public static Action<CharacterCreatedEventArgs> CharacterCreatedHandler { get; set; }
 
+    /// <summary>Optional shard-owned starting-gold amount; stock creation uses 1,000 when unset.</summary>
+    public static Func<Mobile, int> StartingGoldAmount { get; set; }
+
     // Allowed skills that are not race or era specific
     private static readonly HashSet<SkillName> _allowedStartingSkills =
     [
@@ -176,7 +179,11 @@ public static partial class CharacterCreation
         }
 
         m.PackItem(new RedBook("a book", m.Name, 20, true));
-        m.PackItem(new Gold(1000)); // Starting gold can be customized here
+        var startingGold = StartingGoldAmount?.Invoke(m) ?? 1000;
+        if (startingGold > 0)
+        {
+            m.PackItem(new Gold(startingGold));
+        }
         m.PackItem(new Dagger());
         m.PackItem(new Candle());
     }
@@ -450,7 +457,7 @@ public static partial class CharacterCreation
             {
                 case SkillName.Necromancy or SkillName.Chivalry or SkillName.Focus when !Core.AOS:
                 case SkillName.Ninjitsu or SkillName.Bushido when !Core.SE:
-                case SkillName.Throwing or SkillName.Imbuing when !Core.SA:
+                case SkillName.Throwing or SkillName.Imbuing or SkillName.Mysticism when !Core.SA:
                 case SkillName.Archery when raceFlag == Race.AllowGargoylesOnly:
                 case SkillName.Throwing when raceFlag != Race.AllowGargoylesOnly:
                     {

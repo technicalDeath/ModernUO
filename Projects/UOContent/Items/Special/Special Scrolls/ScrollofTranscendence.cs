@@ -2,6 +2,7 @@ using System;
 using ModernUO.Serialization;
 using Server.Engines.MLQuests;
 using Server.Engines.MLQuests.Objectives;
+using Server.Misc;
 using Server.Mobiles;
 
 namespace Server.Items;
@@ -38,7 +39,8 @@ public partial class ScrollofTranscendence : SpecialScroll
 
     public override bool CanUse(Mobile from)
     {
-        if (!(base.CanUse(from) && from is PlayerMobile pm))
+        if (!Core.AOS || !SkillCheck.IsSkillAvailable(Skill) ||
+            !(base.CanUse(from) && from is PlayerMobile pm))
         {
             return false;
         }

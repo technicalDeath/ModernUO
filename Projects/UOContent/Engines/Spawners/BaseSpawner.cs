@@ -475,8 +475,8 @@ public abstract partial class BaseSpawner : Item, ISpawner
 
             if (success)
             {
-                // Check if blocked by a private house (non-transient)
-                if (isMobile && SectorSpawnCacheManager.IsBlockedByHouse(map, x, y, spawnZ))
+                // Resource items must not appear on or inside a private house either.
+                if (SectorSpawnCacheManager.IsBlockedByHouse(map, x, y, spawnZ))
                 {
                     hasNonTransientFailure = true;
                 }
@@ -620,8 +620,8 @@ public abstract partial class BaseSpawner : Item, ISpawner
             return false;
         }
 
-        // Skip positions inside private houses
-        if (isMobile && SectorSpawnCacheManager.IsBlockedByHouse(map, cachedPos.X, cachedPos.Y, verifiedZ))
+        // Recheck house membership after cached positions survive tile verification.
+        if (SectorSpawnCacheManager.IsBlockedByHouse(map, cachedPos.X, cachedPos.Y, verifiedZ))
         {
             spawnPos = default;
             return false;

@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using ModernUO.Serialization;
 using Server.Collections;
 using Server.ContextMenus;
 using Server.Engines.Craft;
+using Server.Mobiles;
 
 namespace Server.Items;
 
@@ -10,6 +12,8 @@ namespace Server.Items;
 public partial class SalvageBag : Bag
 {
     private bool m_Failure;
+
+    internal static bool CanResmelt(Item item) => !NontransferableItemPolicy.Contains(item);
 
     [Constructible]
     public SalvageBag() : this(Utility.RandomBlueHue())
@@ -46,6 +50,12 @@ public partial class SalvageBag : Bag
     {
         try
         {
+            if (!CanResmelt(item))
+            {
+                from.SendMessage("You cannot salvage a nontransferable item.");
+                return false;
+            }
+
             if (CraftResources.GetType(resource) != CraftResourceType.Metal)
             {
                 return false;
@@ -139,13 +149,21 @@ public partial class SalvageBag : Bag
 
     private bool Resmeltables() // Where context menu checks for metal items and dragon barding deeds
     {
-        foreach (var i in Items)
+        return HasResmeltableItems(Items);
+    }
+
+    internal static bool HasResmeltableItems(IEnumerable<Item> items)
+    {
+        foreach (var item in items)
         {
-            return i?.Deleted == false && (
-                i is BaseWeapon weapon && CraftResources.GetType(weapon.Resource) == CraftResourceType.Metal ||
-                i is BaseArmor armor && CraftResources.GetType(armor.Resource) == CraftResourceType.Metal ||
-                i is DragonBardingDeed
-            );
+            if (item?.Deleted == false && (
+                item is BaseWeapon weapon && CraftResources.GetType(weapon.Resource) == CraftResourceType.Metal ||
+                item is BaseArmor armor && CraftResources.GetType(armor.Resource) == CraftResourceType.Metal ||
+                item is DragonBardingDeed
+            ))
+            {
+                return true;
+            }
         }
 
         return false;

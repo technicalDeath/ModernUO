@@ -1384,18 +1384,15 @@ namespace Server.Mobiles
                 {
                     from.SendLocalizedMessage(1049038); // You can get an order now.
 
-                    if (Core.AOS)
-                    {
-                        var bulkOrder = vendor.CreateBulkOrder(from, true);
+                    var bulkOrder = vendor.CreateBulkOrder(from, true);
 
-                        if (bulkOrder is LargeBOD bod)
-                        {
-                            from.SendGump(new LargeBODAcceptGump(bod));
-                        }
-                        else if (bulkOrder is SmallBOD smallBod)
-                        {
-                            from.SendGump(new SmallBODAcceptGump(smallBod));
-                        }
+                    if (bulkOrder is LargeBOD bod)
+                    {
+                        from.SendGump(new LargeBODAcceptGump(bod));
+                    }
+                    else if (bulkOrder is SmallBOD smallBod)
+                    {
+                        from.SendGump(new SmallBODAcceptGump(smallBod));
                     }
                 }
                 else

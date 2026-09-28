@@ -1,5 +1,6 @@
 using System;
 using ModernUO.Serialization;
+using Server.Misc;
 
 namespace Server.Items;
 
@@ -237,6 +238,11 @@ public partial class PowerScroll : SpecialScroll
 
     public override bool CanUse(Mobile from)
     {
+        if (!SkillCheck.IsSkillAvailable(Skill) || !Core.AOS && Value > 100.0)
+        {
+            return false;
+        }
+
         if (!base.CanUse(from))
         {
             return false;

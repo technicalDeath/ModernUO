@@ -27,7 +27,7 @@ public interface ISlayer
     SlayerName Slayer2 { get; set; }
 }
 
-[SerializationGenerator(11, false)]
+[SerializationGenerator(12, false)]
 public abstract partial class BaseWeapon
     : Item, IWeapon, IFactionItem, ICraftable, ISlayer, IDurability, IAosItem, IIdentifiable
 {
@@ -98,6 +98,65 @@ public abstract partial class BaseWeapon
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool ShouldSerializePoisonCharges() => _poisonCharges > 0;
+
+    [SerializableField(30)]
+    [SaveFlag(nameof(ShouldSerializePoisonCorrosionState))]
+    private int _poisonCorrosionState;
+
+    private bool ShouldSerializePoisonCorrosionState() => _poisonCorrosionState > 0;
+
+    public bool IsPoisonCorroded => (_poisonCorrosionState & 0x100) != 0;
+
+    public static int GetPoisonCorrosionInterval(int poisonLevel, double poisoningSkill)
+    {
+        var effectiveLevel = poisonLevel - (poisoningSkill > 99.0 ? 2 : poisoningSkill > 50.0 ? 1 : 0);
+        return Math.Max(1, 6 - effectiveLevel);
+    }
+
+    public void ApplyPoisonCorrosionOnHit(Mobile attacker)
+    {
+        if (!Core.UOR || Core.AOS || Deleted || Poison is null || MaxRange > 1)
+        {
+            return;
+        }
+
+        var hits = (_poisonCorrosionState & 0xff) + 1;
+        _poisonCorrosionState = (_poisonCorrosionState & 0x100) | hits;
+        this.MarkDirty();
+        if (hits < GetPoisonCorrosionInterval(Poison.Level, attacker.Skills.Poisoning.Base))
+        {
+            return;
+        }
+
+        _poisonCorrosionState = 0x100;
+        if (_hitPoints > 0)
+        {
+            --HitPoints;
+        }
+        else if (_maxHitPoints > 1)
+        {
+            --MaxHitPoints;
+            attacker.LocalOverheadMessage(MessageType.Regular, 0x3B2, 1061121);
+        }
+        else
+        {
+            Delete();
+        }
+    }
+
+    public bool CleanPoisonCorrosion()
+    {
+        if (!IsPoisonCorroded)
+        {
+            return false;
+        }
+
+        Poison = null;
+        PoisonCharges = 0;
+        _poisonCorrosionState = 0;
+        this.MarkDirty();
+        return true;
+    }
 
     [InvalidateProperties]
     [SerializableField(9)]
@@ -1015,7 +1074,7 @@ public abstract partial class BaseWeapon
             return false;
         }
 
-        if (!CheckRace(from))
+        if (!Server.Misc.CosmeticElfPolicy.CheckRace(this, from))
         {
             return false;
         }

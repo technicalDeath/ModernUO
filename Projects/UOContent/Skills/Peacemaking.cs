@@ -154,7 +154,7 @@ namespace Server.SkillHandlers
                         else if (!BaseInstrument.CheckMusicianship(from))
                         {
                             from.SendLocalizedMessage(500612); // You play poorly, and there is no effect.
-                            from.NextSkillTime = Core.TickCount + 5000;
+                            from.NextSkillTime = Core.TickCount + (Core.UOR && !Core.AOS ? 10000 : 5000);
                             m_Instrument.PlayInstrumentBadly(from);
                             m_Instrument.ConsumeUse(from);
                         }

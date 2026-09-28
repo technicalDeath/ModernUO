@@ -405,6 +405,53 @@ namespace Server.Engines.BulkOrders
             };
         }
 
+        public override RewardGroup LookupRewards(int points)
+        {
+            var group = base.LookupRewards(points);
+
+            if (Core.AOS || group is null || group.Items.Length == 0)
+            {
+                return group;
+            }
+
+            var allowedCount = 0;
+
+            for (var i = 0; i < group.Items.Length; i++)
+            {
+                if (IsUorReward(group.Items[i]))
+                {
+                    allowedCount++;
+                }
+            }
+
+            if (allowedCount == group.Items.Length)
+            {
+                return group;
+            }
+
+            var allowedItems = new RewardItem[allowedCount];
+            var index = 0;
+
+            for (var i = 0; i < group.Items.Length; i++)
+            {
+                var item = group.Items[i];
+
+                if (IsUorReward(item))
+                {
+                    allowedItems[index++] = item;
+                }
+            }
+
+            return new RewardGroup(group.Points, allowedItems);
+        }
+
+        private static bool IsUorReward(RewardItem item) =>
+            !ReferenceEquals(item.Constructor, RunicHammer) &&
+            !ReferenceEquals(item.Constructor, PowerScroll) &&
+            !ReferenceEquals(item.Constructor, GargoylesPickaxe) &&
+            !ReferenceEquals(item.Constructor, ProspectorsTool) &&
+            !ReferenceEquals(item.Constructor, PowderOfTemperament);
+
         public override int ComputePoints(
             int quantity, bool exceptional, BulkMaterialType material, int itemCount,
             Type type

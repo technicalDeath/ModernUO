@@ -23,6 +23,31 @@ namespace Server.Multis
 
     public static class HousePlacement
     {
+        public static Func<Mobile, Map, Point3D, bool> PlacementTileAllowed { get; set; }
+
+        public static Func<Mobile, int, Point3D, int, int?> PlacementPremium { get; set; }
+
+        public static bool TryGetPlacementPremium(
+            Mobile from, int multiID, Point3D center, int normalCost, out int premium
+        )
+        {
+            premium = 0;
+            if (normalCost <= 0)
+            {
+                return false;
+            }
+
+            var policy = PlacementPremium;
+            var quoted = policy is null ? 0 : policy(from, multiID, center, normalCost);
+            if (quoted is null || quoted < 0 || quoted > int.MaxValue - normalCost)
+            {
+                return false;
+            }
+
+            premium = quoted.Value;
+            return true;
+        }
+
         private const int YardSize = 5;
 
         // Any land tile which matches one of these ID numbers is considered a road and cannot be placed over.
@@ -74,6 +99,11 @@ namespace Server.Multis
             }
 
             if (Region.Find(center, map).IsPartOf<NoHousingRegion, NoHousingGuardedRegion>())
+            {
+                return HousePlacementResult.BadRegion;
+            }
+
+            if (PlacementTileAllowed?.Invoke(from, map, center) == false)
             {
                 return HousePlacementResult.BadRegion;
             }
@@ -140,6 +170,11 @@ namespace Server.Multis
                             return HousePlacementResult.BadRegionRaffle;
                         }
 
+                        return HousePlacementResult.BadRegion;
+                    }
+
+                    if (PlacementTileAllowed?.Invoke(from, map, testPoint) == false)
+                    {
                         return HousePlacementResult.BadRegion;
                     }
 

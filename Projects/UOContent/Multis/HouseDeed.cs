@@ -1,4 +1,6 @@
 using ModernUO.Serialization;
+using Server.Gumps;
+using Server.Mobiles;
 
 namespace Server.Multis.Deeds;
 
@@ -50,9 +52,34 @@ public abstract partial class HouseDeed : Item
 
     public abstract BaseHouse GetHouse(Mobile owner);
 
+    public int NormalPlacementValue => this switch
+    {
+        StonePlasterHouseDeed or FieldStoneHouseDeed or SmallBrickHouseDeed or
+            WoodHouseDeed or WoodPlasterHouseDeed or ThatchedRoofCottageDeed => 43800,
+        BrickHouseDeed => 144500,
+        TwoStoryWoodPlasterHouseDeed or TwoStoryStonePlasterHouseDeed => 192400,
+        TowerDeed => 433200,
+        KeepDeed => 665200,
+        CastleDeed => 1022800,
+        LargePatioDeed => 152800,
+        LargeMarbleDeed => 192000,
+        SmallTowerDeed => 88500,
+        LogCabinDeed => 97800,
+        SandstonePatioDeed => 90900,
+        VillaDeed => 136500,
+        StoneWorkshopDeed => 60600,
+        MarbleWorkshopDeed => 63000,
+        _ => 0
+    };
+
     public void OnPlacement(Mobile from, Point3D p)
     {
-        if (Deleted)
+        CompletePlacement(from, p, from.Map, null);
+    }
+
+    private void CompletePlacement(Mobile from, Point3D p, Map map, int? confirmedPremium)
+    {
+        if (Deleted || from.Map != map || !from.CheckAlive())
         {
             return;
         }
@@ -74,7 +101,56 @@ public abstract partial class HouseDeed : Item
             {
                 case HousePlacementResult.Valid:
                     {
+                        var premium = 0;
+                        if (HousePlacement.PlacementPremium is not null &&
+                            !HousePlacement.TryGetPlacementPremium(from, MultiID, center, NormalPlacementValue, out premium))
+                        {
+                            from.SendMessage("This house's placement price could not be confirmed. Please try again.");
+                            return;
+                        }
+
+                        if (confirmedPremium is null && premium > 0)
+                        {
+                            from.SendGump(new WarningGump(
+                                $"Rural placement adds a non-refundable premium of {premium:N0} gold. " +
+                                $"Your deed covers the normal {NormalPlacementValue:N0} gold house value; " +
+                                $"{premium:N0} gold will be withdrawn now. The total cost is " +
+                                $"{NormalPlacementValue + premium:N0} gold. The premium is not returned " +
+                                "by demolition, re-deeding, or transfer. Continue?",
+                                440,
+                                260,
+                                okay =>
+                                {
+                                    if (okay)
+                                    {
+                                        CompletePlacement(from, p, map, premium);
+                                    }
+                                }
+                            ));
+                            return;
+                        }
+
+                        if (confirmedPremium is not null && confirmedPremium != premium)
+                        {
+                            from.SendMessage("The rural placement price changed. Please target the land again.");
+                            return;
+                        }
+
                         var house = GetHouse(from);
+                        if (house is null)
+                        {
+                            return;
+                        }
+
+                        if (from.AccessLevel < AccessLevel.GameMaster && premium > 0 &&
+                            !Banker.Withdraw(from, premium))
+                        {
+                            house.RemoveKeys(from);
+                            house.Delete();
+                            from.SendLocalizedMessage(1060646);
+                            return;
+                        }
+
                         house.MoveToWorld(center, from.Map);
                         Delete();
 

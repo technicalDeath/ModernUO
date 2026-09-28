@@ -546,6 +546,12 @@ public partial class PlayerVendor : Mobile
             return false;
         }
 
+        if (NontransferableItemPolicy.Contains(item))
+        {
+            SayTo(from, "I cannot accept an item that contains nontransferable items.");
+            return false;
+        }
+
         if (item is Gold)
         {
             if (BaseHouse.NewVendorSystem)

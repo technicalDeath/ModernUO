@@ -571,7 +571,7 @@ public class BlacksmithMenu : ItemListMenu
     {
         for (var i = 0; i < res.Count; ++i)
         {
-            if (item.GetType() == res[i].ItemType)
+            if (res[i].ItemType.IsInstanceOfType(item))
             {
                 var context = DefBlacksmithy.CraftSystem.GetContext(from);
                 if (context != null)
@@ -607,7 +607,7 @@ public class BlacksmithResourceTarget : Target
             var res = DefBlacksmithy.CraftSystem.CraftSubRes;
             for (var i = 0; i < res.Count; ++i)
             {
-                if (item.GetType() == res[i].ItemType)
+                if (res[i].ItemType.IsInstanceOfType(item))
                 {
                     var context = DefBlacksmithy.CraftSystem.GetContext(from);
                     context?.LastResourceIndex = i;

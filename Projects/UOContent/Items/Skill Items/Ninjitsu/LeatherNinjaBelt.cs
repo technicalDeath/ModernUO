@@ -76,6 +76,11 @@ public partial class LeatherNinjaBelt : BaseWaist, INinjaWeapon
 
     public override bool OnEquip(Mobile from)
     {
+        if (!Core.SE)
+        {
+            return false;
+        }
+
         if (base.OnEquip(from))
         {
             from.SendLocalizedMessage(1070785); // Double click this item each time you wish to throw a shuriken.
@@ -94,7 +99,7 @@ public partial class LeatherNinjaBelt : BaseWaist, INinjaWeapon
     {
         base.GetContextMenuEntries(from, ref list);
 
-        if (IsChildOf(from))
+        if (Core.SE && IsChildOf(from))
         {
             list.Add(new NinjaWeapon.LoadEntry(6222));
             list.Add(new NinjaWeapon.UnloadEntry(6223, UsesRemaining > 0));
