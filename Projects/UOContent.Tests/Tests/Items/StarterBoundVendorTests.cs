@@ -185,4 +185,64 @@ public class StarterBoundVendorTests
             recipient.Delete();
         }
     }
+
+    [Fact]
+    public void NewbiedNonNontransferableItemIsRejectedForNpcSaleAndResale()
+    {
+        var sellInfo = new GenericSellInfo();
+        sellInfo.Add(typeof(Katana), 50);
+        var newbied = new Katana { LootType = LootType.Newbied };
+        try
+        {
+            Assert.False(newbied.Nontransferable);
+            Assert.False(sellInfo.IsSellable(newbied));
+            Assert.False(sellInfo.IsResellable(newbied));
+        }
+        finally
+        {
+            newbied.Delete();
+        }
+    }
+
+    [Fact]
+    public void NewbiedNonNontransferableItemCannotBeListedOnPlayerVendor()
+    {
+        var owner = new PlayerMobile { Player = true, AccessLevel = AccessLevel.Player };
+        owner.AddItem(new Backpack());
+        var newbied = new Katana { LootType = LootType.Newbied };
+        owner.Backpack.DropItem(newbied);
+        var vendor = new PlayerVendor(owner, null!);
+        try
+        {
+            Assert.False(vendor.OnDragDrop(owner, newbied));
+            Assert.Same(owner.Backpack, newbied.Parent);
+            Assert.Null(vendor.GetVendorItem(newbied));
+        }
+        finally
+        {
+            vendor.Delete();
+            owner.Delete();
+        }
+    }
+
+    [Fact]
+    public void NewbiedNonNontransferableItemRemainsEligibleForSecureTradeAndSalvage()
+    {
+        var owner = new PlayerMobile { Player = true, AccessLevel = AccessLevel.Player };
+        var recipient = new PlayerMobile { Player = true, AccessLevel = AccessLevel.Player };
+        owner.AddItem(new Backpack());
+        recipient.AddItem(new Backpack());
+        var newbied = new Katana { LootType = LootType.Newbied };
+        owner.Backpack.DropItem(newbied);
+        try
+        {
+            Assert.True(owner.CheckTrade(recipient, newbied, null, false, true, 0, 0));
+            Assert.True(SalvageBag.CanResmelt(newbied));
+        }
+        finally
+        {
+            owner.Delete();
+            recipient.Delete();
+        }
+    }
 }

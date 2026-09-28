@@ -28,6 +28,32 @@ namespace Server.Mobiles
 
             return false;
         }
+
+        // Newbied items are blocked from vendor sale too, alongside Nontransferable ones:
+        // otherwise low-cost creation-time gear becomes a gold faucet through simple resale.
+        // Trade, dropping, banking and salvage are unaffected by this check.
+        public static bool ContainsVendorRestricted(Item item)
+        {
+            if (item.Nontransferable || item.LootType == LootType.Newbied)
+            {
+                return true;
+            }
+
+            if (item is not Container container)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < container.Items.Count; i++)
+            {
+                if (ContainsVendorRestricted(container.Items[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 
     public class GenericSellInfo : IShopSellInfo
@@ -124,9 +150,9 @@ namespace Server.Mobiles
 
         public string GetNameFor(Item item) => item.Name ?? item.LabelNumber.ToString();
 
-        public bool IsSellable(Item item) => !NontransferableItemPolicy.Contains(item) && IsInList(item.GetType());
+        public bool IsSellable(Item item) => !NontransferableItemPolicy.ContainsVendorRestricted(item) && IsInList(item.GetType());
 
-        public bool IsResellable(Item item) => !NontransferableItemPolicy.Contains(item) && IsInList(item.GetType());
+        public bool IsResellable(Item item) => !NontransferableItemPolicy.ContainsVendorRestricted(item) && IsInList(item.GetType());
 
         public void Add(Type type, int price)
         {

@@ -546,9 +546,9 @@ public partial class PlayerVendor : Mobile
             return false;
         }
 
-        if (NontransferableItemPolicy.Contains(item))
+        if (NontransferableItemPolicy.ContainsVendorRestricted(item))
         {
-            SayTo(from, "I cannot accept an item that contains nontransferable items.");
+            SayTo(from, "I cannot accept an item that contains a permanently bound or newbied item.");
             return false;
         }
 
