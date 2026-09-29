@@ -92,7 +92,11 @@ namespace Server.Mobiles
         public override void OnDeath(Container c)
         {
             base.OnDeath(c);
-            c.DropItem(new BookOfNinjitsu());
+
+            if (Core.SE)
+            {
+                c.DropItem(new BookOfNinjitsu());
+            }
         }
 
         public override void GenerateLoot()
