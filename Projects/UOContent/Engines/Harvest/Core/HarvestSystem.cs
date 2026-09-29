@@ -173,7 +173,8 @@ namespace Server.Engines.Harvest
                             var feluccaRacialAmount = (int)Math.Ceiling(feluccaAmount * 1.1);
 
                             var eligableForRacialBonus = def.RaceBonus && from.Race == Race.Human;
-                            var inFelucca = map == Map.Felucca;
+                            // Felucca's doubled yield is a later Trammel-differential bonus; shard ruling: single yield before AoS.
+                            var inFelucca = map == Map.Felucca && Core.AOS;
 
                             if (eligableForRacialBonus && inFelucca && bank.Current >= feluccaRacialAmount &&
                                 Utility.RandomDouble() < 0.1)
