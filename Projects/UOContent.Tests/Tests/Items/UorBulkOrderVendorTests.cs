@@ -11,7 +11,7 @@ namespace UOContent.Tests.Items;
 public class UorBulkOrderVendorTests
 {
     [Fact]
-    public void UorKeepsBlacksmithOrdersAndGatesTailoringOrders()
+    public void UorKeepsBlacksmithOrdersAndGatesTailoringAndWeaponsmithOrders()
     {
         var previous = Core.Expansion;
         Core.Expansion = Expansion.UOR;
@@ -28,17 +28,13 @@ public class UorBulkOrderVendorTests
         var weaver = new Weaver();
         var tailorDeed = new SmallTailorBOD();
         Item? smithDeed = null;
-        Item? weaponsmithDeed = null;
 
         try
         {
             Assert.True(blacksmith.SupportsBulkOrders(player));
-            Assert.True(weaponsmith.SupportsBulkOrders(player));
+            Assert.False(weaponsmith.SupportsBulkOrders(player));
             smithDeed = blacksmith.CreateBulkOrder(player, fromContextMenu: true);
-            player.NextSmithBulkOrder = TimeSpan.Zero;
-            weaponsmithDeed = weaponsmith.CreateBulkOrder(player, fromContextMenu: true);
             Assert.NotNull(smithDeed);
-            Assert.NotNull(weaponsmithDeed);
             Assert.False(tailor.SupportsBulkOrders(player));
             Assert.False(weaver.SupportsBulkOrders(player));
             Assert.Null(tailor.CreateBulkOrder(player, fromContextMenu: true));
@@ -49,7 +45,6 @@ public class UorBulkOrderVendorTests
         finally
         {
             smithDeed?.Delete();
-            weaponsmithDeed?.Delete();
             tailorDeed.Delete();
             blacksmith.Delete();
             weaponsmith.Delete();
@@ -61,7 +56,7 @@ public class UorBulkOrderVendorTests
     }
 
     [Fact]
-    public void AoSKeepsTailoringBulkOrdersAvailable()
+    public void AoSRestoresWeaponsmithOrdersAndTailoringOrders()
     {
         var previous = Core.Expansion;
         Core.Expansion = Expansion.AOS;
@@ -69,16 +64,22 @@ public class UorBulkOrderVendorTests
 
         var player = new PlayerMobile(World.NewMobile);
         player.DefaultMobileInit();
+        player.Skills.Blacksmith.Base = 75.0;
         player.Skills.Tailoring.Base = 75.0;
 
+        var weaponsmith = new Weaponsmith();
         var tailor = new Tailor();
         var weaver = new Weaver();
         var tailorDeed = new SmallTailorBOD();
+        Item? weaponsmithOrder = null;
         Item? tailorOrder = null;
         Item? weaverOrder = null;
 
         try
         {
+            Assert.True(weaponsmith.SupportsBulkOrders(player));
+            weaponsmithOrder = weaponsmith.CreateBulkOrder(player, fromContextMenu: true);
+            Assert.NotNull(weaponsmithOrder);
             Assert.True(tailor.SupportsBulkOrders(player));
             Assert.True(weaver.SupportsBulkOrders(player));
             tailorOrder = tailor.CreateBulkOrder(player, fromContextMenu: true);
@@ -91,9 +92,11 @@ public class UorBulkOrderVendorTests
         }
         finally
         {
+            weaponsmithOrder?.Delete();
             tailorOrder?.Delete();
             weaverOrder?.Delete();
             tailorDeed.Delete();
+            weaponsmith.Delete();
             tailor.Delete();
             weaver.Delete();
             player.Delete();
