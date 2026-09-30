@@ -26,9 +26,12 @@ public class ResurrectGump : DynamicGump
 
     public override bool Singleton => true;
 
+    /// <summary>Lets a shard turn off the pre-AOS resurrection stat loss for players with many short-term murders.</summary>
+    public static bool StatLossEnabled { get; set; } = true;
+
     public static void TryGiveStatLoss(PlayerMobile player)
     {
-        if (Core.AOS || player.ShortTermMurders < ShortMurdersForStatLoss)
+        if (!StatLossEnabled || Core.AOS || player.ShortTermMurders < ShortMurdersForStatLoss)
         {
             return;
         }
