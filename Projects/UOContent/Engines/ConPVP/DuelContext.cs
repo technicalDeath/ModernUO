@@ -1237,6 +1237,9 @@ public partial class DuelContext
         Timer.StartTimer(TimeSpan.FromSeconds(10.0), Unregister);
     }
 
+    // Shard hook: lets a fork block the "i wish to duel" setup gump at its one speech entry point.
+    public static bool DuelingEnabled { get; set; } = true;
+
     public static void Configure()
     {
         EventSink.Speech += EventSink_Speech;
@@ -1398,7 +1401,10 @@ public partial class DuelContext
 
         if (e.Speech.InsensitiveContains("i wish to duel"))
         {
-            if (!pm.CheckAlive())
+            if (!DuelingEnabled)
+            {
+            }
+            else if (!pm.CheckAlive())
             {
             }
             else if (pm.Region.IsPartOf<JailRegion>())

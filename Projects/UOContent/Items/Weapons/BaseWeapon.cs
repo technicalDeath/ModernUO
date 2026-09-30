@@ -107,6 +107,10 @@ public abstract partial class BaseWeapon
 
     public bool IsPoisonCorroded => (_poisonCorrosionState & 0x100) != 0;
 
+    // Shard hook: lets a fork turn the mechanic off without touching the serialized field, so
+    // saves made while it was active keep deserializing.
+    public static bool PoisonCorrosionEnabled { get; set; } = true;
+
     public static int GetPoisonCorrosionInterval(int poisonLevel, double poisoningSkill)
     {
         var effectiveLevel = poisonLevel - (poisoningSkill > 99.0 ? 2 : poisoningSkill > 50.0 ? 1 : 0);
@@ -115,7 +119,7 @@ public abstract partial class BaseWeapon
 
     public void ApplyPoisonCorrosionOnHit(Mobile attacker)
     {
-        if (!Core.UOR || Core.AOS || Deleted || Poison is null || MaxRange > 1)
+        if (!PoisonCorrosionEnabled || !Core.UOR || Core.AOS || Deleted || Poison is null || MaxRange > 1)
         {
             return;
         }

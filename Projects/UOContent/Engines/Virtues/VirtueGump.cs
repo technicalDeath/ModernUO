@@ -28,6 +28,10 @@ public class VirtueGump : DynamicGump
 
     public override bool Singleton => true;
 
+    // Shard hook: lets a fork disable all virtue gameplay (gump, macro, Honor, Sacrifice, Justice,
+    // Valor) at its one choke point without touching every virtue's own file.
+    public static bool Enabled { get; set; } = true;
+
     private VirtueGump(PlayerMobile beholder, PlayerMobile beheld) : base(0, 0)
     {
         _beholder = beholder;
@@ -43,6 +47,11 @@ public class VirtueGump : DynamicGump
 
     public static void RequestVirtueGump(PlayerMobile beholder, PlayerMobile beheld)
     {
+        if (!Enabled)
+        {
+            return;
+        }
+
         if (beholder == beheld && beholder.Murderer)
         {
             beholder.SendLocalizedMessage(1049609); // Murderers cannot invoke this virtue.
@@ -55,7 +64,7 @@ public class VirtueGump : DynamicGump
 
     public static void RequestVirtueItem(PlayerMobile beholder, Mobile beheld, int gumpID)
     {
-        if (beholder != beheld)
+        if (!Enabled || beholder != beheld)
         {
             return;
         }
