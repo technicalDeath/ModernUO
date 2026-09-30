@@ -1242,6 +1242,25 @@ namespace Server.Mobiles
         [GeneratedEvent(nameof(PlayerLoginEvent))]
         public static partial void PlayerLoginEvent(PlayerMobile pm);
 
+        /// <summary>Optional shard-owned: true lets <c>from</c> lift <c>item</c> out of this player's pack.</summary>
+        public static Func<Mobile, PlayerMobile, Item, bool> NonlocalLiftHandler { get; set; }
+
+        /// <summary>Optional shard-owned observer invoked after another mobile lifted an item from this player.</summary>
+        public static Action<Mobile, PlayerMobile, Item> ItemLiftedHandler { get; set; }
+
+        public override bool CheckNonlocalLift(Mobile from, Item item) =>
+            base.CheckNonlocalLift(from, item) || NonlocalLiftHandler?.Invoke(from, this, item) == true;
+
+        public override void OnItemLifted(Mobile from, Item item)
+        {
+            base.OnItemLifted(from, item);
+
+            if (from != this)
+            {
+                ItemLiftedHandler?.Invoke(from, this, item);
+            }
+        }
+
         /// <summary>Optional shard-owned observer invoked after the stock player-death event.</summary>
         public static Action<PlayerMobile> PlayerDeathHandler { get; set; }
 

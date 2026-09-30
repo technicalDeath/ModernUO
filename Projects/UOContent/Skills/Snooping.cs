@@ -1,3 +1,4 @@
+using System;
 using Server.Items;
 using Server.Misc;
 using Server.Mobiles;
@@ -7,6 +8,9 @@ namespace Server.SkillHandlers;
 
 public static class Snooping
 {
+    /// <summary>Shard-owned: true opens the pack of an authorized Knocked Out player without a skill roll.</summary>
+    public static Func<Mobile, Container, Mobile, bool> KnockedOutOpen { get; set; }
+
     public static void Configure()
     {
         Container.SnoopHandler = Container_Snoop;
@@ -48,6 +52,12 @@ public static class Snooping
 
         if (root?.Alive == false)
         {
+            return;
+        }
+
+        if (root is PlayerMobile && KnockedOutOpen?.Invoke(from, cont, root) == true)
+        {
+            cont.DisplayTo(from);
             return;
         }
 
