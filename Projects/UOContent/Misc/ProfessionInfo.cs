@@ -49,7 +49,12 @@ public class ProfessionInfo
 
     static ProfessionInfo()
     {
-        var file = Core.FindDataFile("prof.txt", false);
+        // Shard hook: a distribution can name its own profession file (relative to the server's base directory)
+        // so the shard's templates do not depend on whichever prof.txt the client data folder happens to hold.
+        var shardFile = ServerConfiguration.GetSetting("characterCreation.professionFile", string.Empty);
+        var file = !string.IsNullOrWhiteSpace(shardFile) && File.Exists(Path.Combine(Core.BaseDirectory, shardFile))
+            ? Path.Combine(Core.BaseDirectory, shardFile)
+            : Core.FindDataFile("prof.txt", false);
         if (!File.Exists(file))
         {
             var parent = Path.Combine(Core.BaseDirectory, "Data/Professions");
