@@ -4062,6 +4062,12 @@ namespace Server.Mobiles
         /// </summary>
         public static Action<BaseCreature> ControlledPlacementChangedHandler { get; set; }
 
+        /// <summary>
+        ///     Optional shard policy: return text to make a controlled creature refuse an Attack command against
+        ///     <paramref name="target" /> and say it to the commanding player; null leaves the command alone.
+        /// </summary>
+        public static Func<BaseCreature, Mobile, string> AttackCommandRefusalHandler { get; set; }
+
         public static void TeleportPets(Mobile master, Point3D loc, Map map, bool onlyBonded = false)
         {
             if (master is PlayerMobile { AllFollowers: not null } pm)

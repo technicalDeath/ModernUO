@@ -14,6 +14,7 @@ public class PetPlacementHookTests : IDisposable
     private readonly List<Mobile> _created = new();
     private readonly Func<BaseCreature, Point3D, Map, bool> _followBefore = BaseCreature.CanFollowMasterHandler;
     private readonly Action<BaseCreature> _placementBefore = BaseCreature.ControlledPlacementChangedHandler;
+    private readonly Func<BaseCreature, Mobile, string> _refusalBefore = BaseCreature.AttackCommandRefusalHandler;
 
     private (PlayerMobile master, PetTestStub pet) Spawn(Point3D masterLoc, Point3D petLoc)
     {
@@ -27,6 +28,7 @@ public class PetPlacementHookTests : IDisposable
     {
         BaseCreature.CanFollowMasterHandler = _followBefore;
         BaseCreature.ControlledPlacementChangedHandler = _placementBefore;
+        BaseCreature.AttackCommandRefusalHandler = _refusalBefore;
 
         foreach (var m in _created)
         {
@@ -113,5 +115,45 @@ public class PetPlacementHookTests : IDisposable
         {
             region.Unregister();
         }
+    }
+
+    [Fact]
+    public void AttackCommandRefusal_BlocksTheOrderAndNamesThePetAndTarget()
+    {
+        var (master, pet) = Spawn(new Point3D(1000, 1000, 0), new Point3D(1001, 1000, 0));
+        var victim = new PlayerMobile(World.NewMobile);
+        victim.DefaultMobileInit();
+        victim.MoveToWorld(new Point3D(1002, 1000, 0), Map.Felucca);
+        _created.Add(victim);
+        pet.ControlOrder = OrderType.Follow;
+        BaseCreature seenPet = null;
+        Mobile seenTarget = null;
+        BaseCreature.AttackCommandRefusalHandler = (p, t) =>
+        {
+            seenPet = p;
+            seenTarget = t;
+            return "refused";
+        };
+
+        pet.AIObject.EndPickTarget(master, victim, OrderType.Attack);
+
+        Assert.Same(pet, seenPet);
+        Assert.Same(victim, seenTarget);
+        Assert.Equal(OrderType.Follow, pet.ControlOrder);
+        Assert.Null(pet.Combatant);
+    }
+
+    [Fact]
+    public void AttackCommandRefusal_NullTextLeavesTheOrderAlone()
+    {
+        var (master, pet) = Spawn(new Point3D(1000, 1000, 0), new Point3D(1001, 1000, 0));
+        var target = new PetTestStub();
+        target.MoveToWorld(new Point3D(1002, 1000, 0), Map.Felucca);
+        _created.Add(target);
+        BaseCreature.AttackCommandRefusalHandler = (_, _) => null;
+
+        pet.AIObject.EndPickTarget(master, target, OrderType.Attack);
+
+        Assert.Equal(OrderType.Attack, pet.ControlOrder);
     }
 }

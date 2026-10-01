@@ -190,6 +190,13 @@ public abstract partial class BaseAI
 
     private bool CanAttackTarget(Mobile from, Mobile target)
     {
+        var refusal = BaseCreature.AttackCommandRefusalHandler?.Invoke(Mobile, target);
+        if (refusal != null)
+        {
+            Mobile.SayTo(from, refusal);
+            return false;
+        }
+
         if (target.Hidden)
         {
             return false;
