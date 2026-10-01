@@ -3739,6 +3739,11 @@ namespace Server.Mobiles
 
             InvalidateProperties();
 
+            if (m != null)
+            {
+                ControlledPlacementChangedHandler?.Invoke(this);
+            }
+
             return true;
         }
 
@@ -3750,6 +3755,11 @@ namespace Server.Mobiles
             {
                 Spawner.Remove(this);
                 Spawner = null;
+            }
+
+            if (Controlled)
+            {
+                ControlledPlacementChangedHandler?.Invoke(this);
             }
         }
 
@@ -4040,6 +4050,18 @@ namespace Server.Mobiles
             return true;
         }
 
+        /// <summary>
+        ///     Optional shard policy: return false to stop a controlled creature from following its master to
+        ///     <paramref name="loc" /> on <paramref name="map" /> through <see cref="TeleportPets" />.
+        /// </summary>
+        public static Func<BaseCreature, Point3D, Map, bool> CanFollowMasterHandler { get; set; }
+
+        /// <summary>
+        ///     Optional shard policy: invoked when a controlled creature changes region or gets a new master, so
+        ///     the policy can react to where it now is.
+        /// </summary>
+        public static Action<BaseCreature> ControlledPlacementChangedHandler { get; set; }
+
         public static void TeleportPets(Mobile master, Point3D loc, Map map, bool onlyBonded = false)
         {
             if (master is PlayerMobile { AllFollowers: not null } pm)
@@ -4048,7 +4070,8 @@ namespace Server.Mobiles
                 {
                     if (m.Map == master.Map && master.InRange(m, 3) && m is BaseCreature
                             { Controlled: true, ControlOrder: OrderType.Guard or OrderType.Follow or OrderType.Come } pet &&
-                        pet.ControlMaster == master && (!onlyBonded || pet.IsBonded))
+                        pet.ControlMaster == master && (!onlyBonded || pet.IsBonded) &&
+                        (CanFollowMasterHandler?.Invoke(pet, loc, map) ?? true))
                     {
                         m.MoveToWorld(loc, map);
                     }
@@ -4062,7 +4085,8 @@ namespace Server.Mobiles
             {
                 if (m is BaseCreature
                         { Controlled: true, ControlOrder: OrderType.Guard or OrderType.Follow or OrderType.Come } pet &&
-                    pet.ControlMaster == master && (!onlyBonded || pet.IsBonded))
+                    pet.ControlMaster == master && (!onlyBonded || pet.IsBonded) &&
+                    (CanFollowMasterHandler?.Invoke(pet, loc, map) ?? true))
                 {
                     queue.Enqueue(pet);
                 }
