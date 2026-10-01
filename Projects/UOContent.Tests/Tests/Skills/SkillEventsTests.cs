@@ -155,6 +155,90 @@ public class SkillEventsTests
     }
 
     [Fact]
+    public void GainChanceMultiplier_ScalesTheStockRollOnly()
+    {
+        var from = new Mobile();
+        var skill = from.Skills[SkillName.Mining];
+        skill.Base = 50.0;
+        var calls = 0;
+
+        double Boost(Mobile mobile, Skill gainedSkill)
+        {
+            calls++;
+            Assert.Same(from, mobile);
+            Assert.Same(skill, gainedSkill);
+            return 1000.0;
+        }
+
+        SkillEvents.GainChanceMultiplier = Boost;
+        try
+        {
+            // A multiplier large enough that the stock probability reaches 1 gains on every eligible check.
+            SkillCheck.CheckSkill(from, skill, new object(), 0.5);
+            Assert.Equal(1, calls);
+            Assert.Equal(50.1, skill.Base, 3);
+
+            // Sub-10 gain is unconditional in stock and never consults the multiplier.
+            skill.Base = 5.0;
+            SkillCheck.CheckSkill(from, skill, new object(), 0.5);
+            Assert.Equal(1, calls);
+            Assert.True(skill.Base > 5.0);
+        }
+        finally
+        {
+            SkillEvents.GainChanceMultiplier = null;
+            from.Delete();
+        }
+    }
+
+    [Fact]
+    public void GainChanceMultiplier_IsNotConsultedWhenAnOverrideHandlesTheAttempt()
+    {
+        var from = new Mobile();
+        var skill = from.Skills[SkillName.Mining];
+        skill.Base = 50.0;
+        var calls = 0;
+
+        SkillEvents.GainChanceMultiplier = (_, _) =>
+        {
+            calls++;
+            return 1000.0;
+        };
+
+        bool Handle(Mobile mobile, Skill gainedSkill, bool success) => true;
+
+        SkillEvents.SkillGainOverride += Handle;
+        try
+        {
+            SkillCheck.CheckSkill(from, skill, new object(), 0.5);
+            Assert.Equal(0, calls);
+            Assert.Equal(50.0, skill.Base);
+        }
+        finally
+        {
+            SkillEvents.SkillGainOverride -= Handle;
+            SkillEvents.GainChanceMultiplier = null;
+            from.Delete();
+        }
+    }
+
+    [Fact]
+    public void GainChanceMultiplier_DefaultIsStock()
+    {
+        Assert.Null(SkillEvents.GainChanceMultiplier);
+
+        var from = new Mobile();
+        try
+        {
+            Assert.Equal(1.0, SkillEvents.InvokeGainChanceMultiplier(from, from.Skills[SkillName.Mining]));
+        }
+        finally
+        {
+            from.Delete();
+        }
+    }
+
+    [Fact]
     public void SubTenEligibleAttemptCanUseTheRestorationOverride()
     {
         var from = new Mobile();

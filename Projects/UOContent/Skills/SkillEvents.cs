@@ -18,6 +18,15 @@ public static class SkillEvents
     public static event Func<Mobile, Skill, bool, bool> SkillGainOverride;
 
     /// <summary>
+    /// Shard hook: a multiplier applied to the stock gain probability of a skill check, after
+    /// <see cref="SkillInfo.GainFactor" /> and before the 0.01 floor and the controlled-pet doubling. Null (the
+    /// default) is the stock behavior. It is consulted only on the stock roll, so a
+    /// <see cref="SkillGainOverride" /> that handles the attempt (Skill Bank restoration, Mastery) never reaches it,
+    /// and the unconditional sub-10 gains never reach it either. Subscribers chain the previous delegate.
+    /// </summary>
+    public static Func<Mobile, Skill, double> GainChanceMultiplier { get; set; }
+
+    /// <summary>
     /// Raised once per skill attempt from the four <c>Mobile_SkillCheck*</c> handlers with the attempt's
     /// outcome, including attempts the handler resolves without a roll (too difficult, no challenge).
     /// Not raised when the mobile lacks the skill. Fires for every <see cref="Mobile" />, including
@@ -38,6 +47,10 @@ public static class SkillEvents
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool InvokeSkillGainOverride(Mobile from, Skill skill, bool success) =>
         SkillGainOverride?.Invoke(from, skill, success) == true;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static double InvokeGainChanceMultiplier(Mobile from, Skill skill) =>
+        GainChanceMultiplier?.Invoke(from, skill) ?? 1.0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void InvokeSkillDisplaced(Mobile from, Skill displaced, int lostTenths) =>
