@@ -4074,6 +4074,18 @@ namespace Server.Mobiles
         /// </summary>
         public static Func<Mobile, BaseCreature, string> TameAttemptRefusalHandler { get; set; }
 
+        /// <summary>
+        ///     Optional shard policy: return text to refuse a player's manual Release of <paramref name="pet" />
+        ///     (speech, context menu or the confirm gump); null lets the release proceed.
+        /// </summary>
+        public static Func<BaseCreature, Mobile, string> ReleaseCommandRefusalHandler { get; set; }
+
+        /// <summary>
+        ///     Optional shard policy: invoked just before a pet whose loyalty ran out is released to the wild, so
+        ///     the shard can decide where it ends up.
+        /// </summary>
+        public static Action<BaseCreature> LoyaltyReleaseHandler { get; set; }
+
         public static void TeleportPets(Mobile master, Point3D loc, Map map, bool onlyBonded = false)
         {
             if (master is PlayerMobile { AllFollowers: not null } pm)
@@ -4153,6 +4165,14 @@ namespace Server.Mobiles
             }
 
             CheckStatTimers();
+        }
+
+        public void ReleaseOnLoyaltyLoss()
+        {
+            Say(1043255, Name); // ~1_NAME~ appears to have decided that is better off without a master!
+            Loyalty = MaxLoyalty;
+            LoyaltyReleaseHandler?.Invoke(this);
+            ControlOrder = OrderType.Release;
         }
 
         public override bool CanBeDamaged()
@@ -6028,11 +6048,7 @@ namespace Server.Mobiles
 
             while (toRelease.Count > 0)
             {
-                var c = toRelease.Dequeue();
-
-                c.Say(1043255, c.Name); // ~1_NAME~ appears to have decided that is better off without a master!
-                c.Loyalty = BaseCreature.MaxLoyalty;
-                c.ControlOrder = OrderType.Release;
+                toRelease.Dequeue().ReleaseOnLoyaltyLoss();
             }
 
             while (toRemove.Count > 0)

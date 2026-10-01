@@ -42,6 +42,14 @@ public class ConfirmReleaseGump : StaticGump<ConfirmReleaseGump>
             return;
         }
 
+        // The pet may have moved since the gump opened.
+        var refusal = BaseCreature.ReleaseCommandRefusalHandler?.Invoke(_pet, _from);
+        if (refusal != null)
+        {
+            _from.SendMessage(refusal);
+            return;
+        }
+
         _pet.IssueOrder(OrderType.Release, _from);
     }
 }

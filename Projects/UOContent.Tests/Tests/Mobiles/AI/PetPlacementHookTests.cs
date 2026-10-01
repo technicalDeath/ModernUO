@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Server;
+using Server.Gumps;
+using Server.Network;
 using Server.Mobiles;
 using Xunit;
 
@@ -15,6 +17,8 @@ public class PetPlacementHookTests : IDisposable
     private readonly Func<BaseCreature, Point3D, Map, bool> _followBefore = BaseCreature.CanFollowMasterHandler;
     private readonly Action<BaseCreature> _placementBefore = BaseCreature.ControlledPlacementChangedHandler;
     private readonly Func<BaseCreature, Mobile, string> _refusalBefore = BaseCreature.AttackCommandRefusalHandler;
+    private readonly Func<BaseCreature, Mobile, string> _releaseBefore = BaseCreature.ReleaseCommandRefusalHandler;
+    private readonly Action<BaseCreature> _loyaltyBefore = BaseCreature.LoyaltyReleaseHandler;
 
     private (PlayerMobile master, PetTestStub pet) Spawn(Point3D masterLoc, Point3D petLoc)
     {
@@ -29,6 +33,8 @@ public class PetPlacementHookTests : IDisposable
         BaseCreature.CanFollowMasterHandler = _followBefore;
         BaseCreature.ControlledPlacementChangedHandler = _placementBefore;
         BaseCreature.AttackCommandRefusalHandler = _refusalBefore;
+        BaseCreature.ReleaseCommandRefusalHandler = _releaseBefore;
+        BaseCreature.LoyaltyReleaseHandler = _loyaltyBefore;
 
         foreach (var m in _created)
         {
@@ -155,5 +161,50 @@ public class PetPlacementHookTests : IDisposable
         pet.AIObject.EndPickTarget(master, target, OrderType.Attack);
 
         Assert.Equal(OrderType.Attack, pet.ControlOrder);
+    }
+
+    private static RelayInfo Continue() =>
+        new(2, ReadOnlySpan<int>.Empty, ReadOnlySpan<ushort>.Empty, ReadOnlySpan<Range>.Empty, ReadOnlySpan<byte>.Empty);
+
+    [Fact]
+    public void ReleaseRefusal_KeepsThePetWhenTheConfirmGumpIsAccepted()
+    {
+        var (master, pet) = Spawn(new Point3D(1000, 1000, 0), new Point3D(1001, 1000, 0));
+        Mobile seenMaster = null;
+        BaseCreature.ReleaseCommandRefusalHandler = (_, from) =>
+        {
+            seenMaster = from;
+            return "no";
+        };
+
+        new ConfirmReleaseGump(master, pet).OnResponse(null, Continue());
+
+        Assert.Same(master, seenMaster);
+        Assert.True(pet.Controlled);
+        Assert.Same(master, pet.ControlMaster);
+    }
+
+    [Fact]
+    public void ReleaseWithoutARefusal_ReleasesThePetToTheWild()
+    {
+        var (master, pet) = Spawn(new Point3D(1000, 1000, 0), new Point3D(1001, 1000, 0));
+        BaseCreature.ReleaseCommandRefusalHandler = null;
+
+        new ConfirmReleaseGump(master, pet).OnResponse(null, Continue());
+
+        Assert.False(pet.Controlled);
+    }
+
+    [Fact]
+    public void LoyaltyRelease_CallsTheHandlerFirstThenReleases()
+    {
+        var (_, pet) = Spawn(new Point3D(1000, 1000, 0), new Point3D(1001, 1000, 0));
+        var wasControlledInHandler = false;
+        BaseCreature.LoyaltyReleaseHandler = p => wasControlledInHandler = p.Controlled;
+
+        pet.ReleaseOnLoyaltyLoss();
+
+        Assert.True(wasControlledInHandler);
+        Assert.False(pet.Controlled);
     }
 }

@@ -112,6 +112,13 @@ internal sealed class InternalEntry : ContextMenuEntry
             return;
         }
 
+        var refusal = BaseCreature.ReleaseCommandRefusalHandler?.Invoke(bc, from);
+        if (refusal != null)
+        {
+            from.SendMessage(refusal);
+            return;
+        }
+
         from.SendGump(new ConfirmReleaseGump(from, bc));
     }
 

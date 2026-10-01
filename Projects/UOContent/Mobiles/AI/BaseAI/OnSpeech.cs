@@ -414,6 +414,13 @@ public abstract partial class BaseAI
             return;
         }
 
+        var refusal = BaseCreature.ReleaseCommandRefusalHandler?.Invoke(Mobile, from);
+        if (refusal != null)
+        {
+            from.SendMessage(refusal);
+            return;
+        }
+
         from.SendGump(new ConfirmReleaseGump(from, Mobile));
     }
 
