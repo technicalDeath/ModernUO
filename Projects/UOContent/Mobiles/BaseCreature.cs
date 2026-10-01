@@ -4068,6 +4068,12 @@ namespace Server.Mobiles
         /// </summary>
         public static Func<BaseCreature, Mobile, string> AttackCommandRefusalHandler { get; set; }
 
+        /// <summary>
+        ///     Optional shard policy: return text to refuse a taming attempt on <paramref name="creature" /> by
+        ///     <paramref name="tamer" /> before it starts; null lets the attempt proceed.
+        /// </summary>
+        public static Func<Mobile, BaseCreature, string> TameAttemptRefusalHandler { get; set; }
+
         public static void TeleportPets(Mobile master, Point3D loc, Map map, bool onlyBonded = false)
         {
             if (master is PlayerMobile { AllFollowers: not null } pm)

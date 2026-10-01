@@ -167,6 +167,13 @@ namespace Server.SkillHandlers
                     return;
                 }
 
+                var refusal = BaseCreature.TameAttemptRefusalHandler?.Invoke(from, creature);
+                if (refusal != null)
+                {
+                    from.SendMessage(refusal);
+                    return;
+                }
+
                 if (creature.Owners.Count >= BaseCreature.MaxOwners && !creature.Owners.Contains(from))
                 {
                     // This animal has had too many owners and is too upset for you to tame.
