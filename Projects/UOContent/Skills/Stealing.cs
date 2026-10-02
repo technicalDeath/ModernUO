@@ -24,13 +24,18 @@ public static class Stealing
         Item item,
         Mobile victim,
         Item stolen,
-        bool caught
+        bool caught,
+        bool rolled
     );
 
     /// <summary>Shard-owned pre-transfer restriction; true preserves ordinary stealing.</summary>
     public static TheftEligibilityHandler TheftEligibility { get; set; }
 
-    /// <summary>Shard-owned post-resolution observer; stock outcome is already committed.</summary>
+    /// <summary>
+    /// Shard-owned post-resolution observer; stock outcome is already committed. <c>rolled</c> is true only when the
+    /// Stealing skill check actually ran: attempts refused before it (hands full, not in the guild, newbied item,
+    /// eligibility veto, too heavy and so on) also arrive here with <c>stolen</c> null and <c>caught</c> false.
+    /// </summary>
     public static TheftResolutionHandler TheftResolved { get; set; }
 
     public static bool ClassicMode { get; private set; }
@@ -85,6 +90,7 @@ public static class Stealing
     private class StealingTarget : Target
     {
         private readonly Mobile _thief;
+        private bool _rolled;
 
         public StealingTarget(Mobile thief) : base(1, false, TargetFlags.None)
         {
@@ -282,6 +288,8 @@ public static class Stealing
                 }
                 else
                 {
+                    _rolled = true;
+
                     if (toSteal.Stackable && toSteal.Amount > 1)
                     {
                         var maxAmount = Math.Clamp(
@@ -360,6 +368,7 @@ public static class Stealing
         {
             from.RevealingAction();
 
+            _rolled = false;
             Item stolen = null;
             Item targetedItem = null;
             IEntity root = null;
@@ -439,7 +448,7 @@ public static class Stealing
                 pm.Delta(MobileDelta.Noto);
             }
 
-            TheftResolved?.Invoke(_thief, targetedItem, mobRoot, stolen, caught);
+            TheftResolved?.Invoke(_thief, targetedItem, mobRoot, stolen, caught, _rolled);
 
             const int TargeterCooldown = 30000; // 30s
             const int SkillCooldown = 10000;    // 10s
