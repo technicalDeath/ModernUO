@@ -39,6 +39,18 @@ namespace Server.Mobiles
         private static bool _enableVendorBuyOPL;
         private static bool _vendorInvulnerable;
 
+        /// <summary>
+        ///     Raised after a vendor rebuilds its buy list (on creation and after load), so a distribution can add entries
+        ///     for item types UOContent cannot reference. Runs inside the vendor's constructor, before it has a map.
+        /// </summary>
+        public static event Action<BaseVendor, List<IBuyItemInfo>> BuyInfoLoaded;
+
+        /// <summary>
+        ///     Raised after a buy-list purchase has been delivered; the count is what was actually bought, after stock
+        ///     limits.
+        /// </summary>
+        public static event Action<BaseVendor, Mobile, GenericBuyInfo, int> ItemsBought;
+
         public static void Configure()
         {
             // Turn off to remove tooltips while buying items
@@ -608,6 +620,8 @@ namespace Server.Mobiles
                 _buyInfo.AddRange(sbInfo.BuyInfo);
                 _sellInfo.Add(sbInfo.SellInfo);
             }
+
+            BuyInfoLoaded?.Invoke(this, _buyInfo);
         }
 
         public virtual bool GetGender() => Utility.RandomBool();
@@ -1218,7 +1232,7 @@ namespace Server.Mobiles
             return true;
         }
 
-        private static void ProcessValidPurchase(int amount, GenericBuyInfo bii, Mobile buyer, Container cont)
+        private void ProcessValidPurchase(int amount, GenericBuyInfo bii, Mobile buyer, Container cont)
         {
             if (amount > bii.Amount)
             {
@@ -1295,6 +1309,8 @@ namespace Server.Mobiles
                     }
                 }
             }
+
+            ItemsBought?.Invoke(this, buyer, bii, amount);
         }
 
         public virtual bool CheckVendorAccess(Mobile from) =>
