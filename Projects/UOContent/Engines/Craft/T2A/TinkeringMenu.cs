@@ -61,7 +61,7 @@ public class TinkeringMenu : ItemListMenu
         typeof(DartTrapCraft), typeof(ExplosionTrapCraft), typeof(PoisonTrapCraft)
     ];
 
-    private static readonly Type[] MiscTypes =
+    private static Type[] _miscTypes =
     [
         typeof(KeyRing), typeof(Key),
         typeof(Scales), typeof(Spyglass), typeof(Lantern), typeof(HeatingStand),
@@ -193,7 +193,7 @@ public class TinkeringMenu : ItemListMenu
         Category.Parts     => PartTypes,
         Category.Utensils  => UtensilTypes,
         Category.Traps     => TrapTypes,
-        Category.Misc      => MiscTypes,
+        Category.Misc      => _miscTypes,
         Category.Jewelry   => AllJewelryTypes,
         Category.Necklaces => NecklaceTypes,
         Category.Earrings  => EarringTypes,
@@ -218,7 +218,26 @@ public class TinkeringMenu : ItemListMenu
     public static ItemListEntry[] Parts() => _partEntries ??= BuildStaticEntries(PartTypes, "ingots");
     public static ItemListEntry[] Utensils() => _utensilEntries ??= BuildStaticEntries(UtensilTypes, "ingots");
     public static ItemListEntry[] Traps() => _trapEntries ??= BuildStaticEntries(TrapTypes, "ingots");
-    public static ItemListEntry[] Misc() => _miscEntries ??= BuildStaticEntries(MiscTypes, "ingots");
+    public static ItemListEntry[] Misc() => _miscEntries ??= BuildStaticEntries(_miscTypes, "ingots");
+
+    /// <summary>
+    ///     Adds a craftable type to the Miscellaneous list of this menu, which offers only the types named here.
+    ///     The type must also be in <see cref="DefTinkering.CraftSystem" />'s craft items; the menu lists it only to
+    ///     someone who can make it. Adding a type twice has no effect.
+    /// </summary>
+    public static void AddMiscType(Type type)
+    {
+        if (Array.IndexOf(_miscTypes, type) >= 0)
+        {
+            return;
+        }
+
+        var types = new Type[_miscTypes.Length + 1];
+        _miscTypes.CopyTo(types, 0);
+        types[^1] = type;
+        _miscTypes = types;
+        _miscEntries = null;
+    }
     public static ItemListEntry[] Necklaces() => _necklaceEntries ??= BuildStaticEntries(NecklaceTypes, "ingots");
     public static ItemListEntry[] Earrings() => _earringEntries ??= BuildStaticEntries(EarringTypes, "ingots");
     public static ItemListEntry[] Rings() => _ringEntries ??= BuildStaticEntries(RingTypes, "ingots");
