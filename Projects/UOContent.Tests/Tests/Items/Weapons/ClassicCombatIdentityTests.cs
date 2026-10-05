@@ -47,12 +47,14 @@ public class ClassicCombatIdentityTests
         WithUor(() =>
         {
             Assert.False(Core.AOS);
-            PoisonKinds.Configure();
+
+            // Not registered: PoisonKinds.Configure() throws on a second call, and other tests register the shared poisons.
+            var poison = new PoisonImpl("ClassicCombatTest", 98, 1, 8, 18, 10.0, 3.0, 3.25, 10, 3);
 
             var attacker = NewMobile();
             var defender = NewMobile();
-            var sword = new Katana { Poison = Poison.Regular, PoisonCharges = 1 };
-            var spear = new ShortSpear { Poison = Poison.Regular, PoisonCharges = 1 };
+            var sword = new Katana { Poison = poison, PoisonCharges = 1 };
+            var spear = new ShortSpear { Poison = poison, PoisonCharges = 1 };
 
             sword.OnHit(attacker, defender);
             spear.OnHit(attacker, defender);
