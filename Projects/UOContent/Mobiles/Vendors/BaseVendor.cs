@@ -46,10 +46,22 @@ namespace Server.Mobiles
         public static event Action<BaseVendor, List<IBuyItemInfo>> BuyInfoLoaded;
 
         /// <summary>
+        ///     Raised right after <see cref="BuyInfoLoaded" /> with the list of what the vendor buys from players, so a
+        ///     distribution can add entries for item types UOContent cannot reference.
+        /// </summary>
+        public static event Action<BaseVendor, List<IShopSellInfo>> SellInfoLoaded;
+
+        /// <summary>
         ///     Raised after a buy-list purchase has been delivered; the count is what was actually bought, after stock
         ///     limits.
         /// </summary>
         public static event Action<BaseVendor, Mobile, GenericBuyInfo, int> ItemsBought;
+
+        /// <summary>
+        ///     Raised for each line a vendor buys from a player, after the item has changed hands (it may already be
+        ///     deleted). The count is the quantity taken and the gold is what the vendor pays for that line.
+        /// </summary>
+        public static event Action<BaseVendor, Mobile, Item, int, int> ItemsSold;
 
         public static void Configure()
         {
@@ -546,7 +558,9 @@ namespace Server.Mobiles
                         }
                     }
 
-                    GiveGold += ssi.GetSellPriceFor(resp.Item) * amount;
+                    var paid = ssi.GetSellPriceFor(resp.Item) * amount;
+                    GiveGold += paid;
+                    ItemsSold?.Invoke(this, seller, resp.Item, amount, paid);
                     break;
                 }
             }
@@ -622,6 +636,7 @@ namespace Server.Mobiles
             }
 
             BuyInfoLoaded?.Invoke(this, _buyInfo);
+            SellInfoLoaded?.Invoke(this, _sellInfo);
         }
 
         public virtual bool GetGender() => Utility.RandomBool();
