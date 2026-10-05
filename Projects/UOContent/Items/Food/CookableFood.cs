@@ -1,3 +1,4 @@
+using System;
 using ModernUO.Serialization;
 using Server.Targeting;
 
@@ -6,6 +7,8 @@ namespace Server.Items;
 [SerializationGenerator(0, false)]
 public abstract partial class CookableFood : Item
 {
+    private static readonly TimeSpan CookDelay = TimeSpan.FromSeconds(5.0);
+
     [SerializableField(0)]
     [SerializedCommandProperty(AccessLevel.GameMaster)]
     private int _cookingLevel;
@@ -14,23 +17,99 @@ public abstract partial class CookableFood : Item
 
     public abstract Food Cook();
 
-    public static bool IsHeatSource(object targeted)
+    // Before the Publish 14 cooking menu, cooking was this: use the food, then target a heat source.
+    public override void OnDoubleClick(Mobile from)
     {
-        int itemID;
+        if (!CanCook(from))
+        {
+            return;
+        }
 
-        if (targeted is Item item)
-        {
-            itemID = item.ItemID;
-        }
-        else if (targeted is StaticTarget target)
-        {
-            itemID = target.ItemID;
-        }
-        else
+        from.Target = new CookTarget(this);
+    }
+
+    // Rechecked when the heat source is picked, so food handed away in between cannot be cooked from afar.
+    private bool CanCook(Mobile from)
+    {
+        if (Deleted || !VerifyMove(from) || RootParent is Mobile owner && owner != from)
         {
             return false;
         }
 
+        if (!from.InRange(GetWorldLocation(), 2))
+        {
+            from.LocalOverheadMessage(MessageType.Regular, 0x3B2, 1019045); // I can't reach that.
+            return false;
+        }
+
+        return true;
+    }
+
+    private static void FinishCooking(Mobile from, IPoint3D heatSource, Map map, CookableFood food)
+    {
+        from.EndAction<CookableFood>();
+
+        if (from.Deleted || from.Map != map || heatSource != null && from.GetDistanceToSqrt(heatSource) > 3)
+        {
+            from.SendLocalizedMessage(500686); // You burn the food to a crisp! It's ruined.
+            return;
+        }
+
+        // The era chance is the Cooking skill itself and every food can be tried at zero skill, so the
+        // per-food CookingLevel (a RunUO minimum for the menu) is not used.
+        if (!from.CheckSkill(SkillName.Cooking, 0.0, 100.0))
+        {
+            from.SendLocalizedMessage(500686); // You burn the food to a crisp! It's ruined.
+            return;
+        }
+
+        if (from.AddToBackpack(food.Cook()))
+        {
+            from.PlaySound(0x57);
+        }
+    }
+
+    private class CookTarget : Target
+    {
+        private readonly CookableFood _food;
+
+        public CookTarget(CookableFood food) : base(1, false, TargetFlags.None) => _food = food;
+
+        protected override void OnTarget(Mobile from, object targeted)
+        {
+            if (!IsHeatSource(targeted) || !_food.CanCook(from))
+            {
+                return;
+            }
+
+            if (!from.BeginAction<CookableFood>())
+            {
+                from.SendLocalizedMessage(500119); // You must wait to perform another action.
+                return;
+            }
+
+            from.PlaySound(0x225);
+
+            // One item per cook, even from a stack; Consume may delete the stack, which Cook() does not care about.
+            var food = _food;
+            var heatSource = targeted as IPoint3D;
+            var map = from.Map;
+            food.Consume();
+
+            Timer.StartTimer(CookDelay, () => FinishCooking(from, heatSource, map, food));
+        }
+    }
+
+    public static bool IsHeatSource(object targeted) =>
+        targeted switch
+        {
+            Item item           => IsHeatSource(item.ItemID),
+            StaticTarget target => IsHeatSource(target.ItemID),
+            _                   => false
+        };
+
+    public static bool IsHeatSource(int itemID)
+    {
         if (itemID >= 0xDE3 && itemID <= 0xDE9)
         {
             return true; // Campfire
@@ -66,7 +145,13 @@ public abstract partial class CookableFood : Item
             return true; // Fire field
         }
 
-        return false;
+        // Era cooks used forges, and the craft menu's own heat list includes them.
+        if (itemID >= 0x197A && itemID <= 0x19A9)
+        {
+            return true; // Large forge
+        }
+
+        return itemID == 0xFB1; // Small forge
     }
 }
 
