@@ -3573,7 +3573,7 @@ namespace Server.Mobiles
 
             foreach (var follower in allFollowers)
             {
-                if (follower is not BaseCreature pet || pet.ControlMaster == null)
+                if (follower is not BaseCreature { Controlled: true } pet || pet.ControlMaster == null)
                 {
                     continue;
                 }
@@ -3609,7 +3609,6 @@ namespace Server.Mobiles
                 pet.Internalize();
 
                 pet.SetControlMaster(null);
-                pet.SummonMaster = null;
 
                 pet.IsStabled = true;
                 pet.StabledBy = this;
@@ -3657,11 +3656,6 @@ namespace Server.Mobiles
                 if (Followers + pet.ControlSlots <= FollowersMax)
                 {
                     pet.SetControlMaster(this);
-
-                    if (pet.SummonMaster != null)
-                    {
-                        pet.SummonMaster = this;
-                    }
 
                     pet.ControlTarget = this;
                     pet.ControlOrder = OrderType.Follow;
@@ -3896,6 +3890,35 @@ namespace Server.Mobiles
                 }
 
                 Stabled = null;
+            }
+
+            if (_allFollowers?.Count > 0)
+            {
+                // Releasing or deleting a follower removes it from _allFollowers.
+                using var followers = PooledRefQueue<BaseCreature>.Create(_allFollowers.Count);
+
+                foreach (var follower in _allFollowers)
+                {
+                    // Escorts and hirelings notice a deleted master and walk off on their own.
+                    if (follower is BaseCreature bc and not (BaseEscortable or BaseHire))
+                    {
+                        followers.Enqueue(bc);
+                    }
+                }
+
+                while (followers.Count > 0)
+                {
+                    var bc = followers.Dequeue();
+                    if (bc.Summoned || bc.IsBonded || bc.IsDeadPet)
+                    {
+                        bc.Delete();
+                    }
+                    else
+                    {
+                        // An unbonded pet goes wild and despawns on the abandoned-pet timer.
+                        bc.ControlOrder = OrderType.Release;
+                    }
+                }
             }
         }
 
