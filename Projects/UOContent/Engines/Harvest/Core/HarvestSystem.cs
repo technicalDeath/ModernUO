@@ -4,8 +4,23 @@ using Server.Targeting;
 
 namespace Server.Engines.Harvest
 {
+    public enum HarvestStage
+    {
+        Started,
+        Harvested,
+        Failed,
+        PackFull,
+        Concurrent
+    }
+
     public abstract class HarvestSystem
     {
+        /// <summary>
+        ///     Raised as a harvest attempt starts, ends normally, or is refused because the mobile is already harvesting.
+        ///     Attempts that end through a failed range, resource or tool check raise nothing.
+        /// </summary>
+        public static event Action<HarvestSystem, Mobile, Item, object, HarvestStage> StageChanged;
+
         public HarvestDefinition[] Definitions { get; init; }
 
         public virtual bool CheckTool(Mobile from, Item tool)
@@ -143,6 +158,7 @@ namespace Server.Engines.Harvest
             // double skillValue = from.Skills[def.Skill].Value;
 
             Type type = null;
+            var stage = HarvestStage.Failed;
 
             if (skillBase >= resource.ReqSkill && from.CheckSkill(def.Skill, resource.MinSkill, resource.MaxSkill))
             {
@@ -199,10 +215,12 @@ namespace Server.Engines.Harvest
 
                         if (Give(from, item, def.PlaceAtFeetIfFull))
                         {
+                            stage = HarvestStage.Harvested;
                             SendSuccessTo(from, item, resource);
                         }
                         else
                         {
+                            stage = HarvestStage.PackFull;
                             SendPackFullTo(from, item, def, resource);
                             item.Delete();
                         }
@@ -249,6 +267,7 @@ namespace Server.Engines.Harvest
             }
 
             OnHarvestFinished(from, tool, def, vein, bank, resource, toHarvest);
+            StageChanged?.Invoke(this, from, tool, toHarvest, stage);
         }
 
         public virtual void OnHarvestFinished(
@@ -475,11 +494,13 @@ namespace Server.Engines.Harvest
             if (!from.BeginAction(toLock))
             {
                 OnConcurrentHarvest(from, tool, def, toHarvest);
+                StageChanged?.Invoke(this, from, tool, toHarvest, HarvestStage.Concurrent);
                 return;
             }
 
             new HarvestTimer(from, tool, this, def, toHarvest, toLock).Start();
             OnHarvestStarted(from, tool, def, toHarvest);
+            StageChanged?.Invoke(this, from, tool, toHarvest, HarvestStage.Started);
         }
 
         public virtual bool GetHarvestDetails(
