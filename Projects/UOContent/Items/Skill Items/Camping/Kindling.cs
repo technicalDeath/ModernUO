@@ -1,8 +1,23 @@
+using System;
 using System.Collections.Generic;
 using ModernUO.Serialization;
 using Server.Regions;
 
 namespace Server.Items;
+
+public enum KindlingFeed
+{
+    /// <summary>The fire is not this handler's to feed; try the next fire, or light a new one.</summary>
+    NotHandled,
+
+    /// <summary>The fire was fed and one Kindling is used.</summary>
+    Fed,
+
+    /// <summary>The mobile was told why not; nothing is used and no new fire is lit.</summary>
+    Refused
+}
+
+public delegate KindlingFeed KindlingFeedHandler(Mobile from, Campfire fire);
 
 [SerializationGenerator(0, false)]
 public partial class Kindling : Item
@@ -13,6 +28,12 @@ public partial class Kindling : Item
         Stackable = true;
         Amount = amount;
     }
+
+    /// <summary>Offered each Campfire within a tile of a mobile using Kindling, before a new fire is lit.</summary>
+    public static KindlingFeedHandler FeedHandler { get; set; }
+
+    /// <summary>Decides whether a mobile lights a fire. Null keeps the stock Camping skill roll.</summary>
+    public static Func<Mobile, bool> IgniteCheck { get; set; }
 
     public override double DefaultWeight => 5.0;
 
@@ -29,26 +50,66 @@ public partial class Kindling : Item
             return;
         }
 
+        switch (TryFeed(from))
+        {
+            case KindlingFeed.Fed:
+                {
+                    UseOne(from);
+                    return;
+                }
+            case KindlingFeed.Refused:
+                {
+                    return;
+                }
+        }
+
         var fireLocation = GetFireLocation(from);
 
         if (fireLocation == Point3D.Zero)
         {
             from.SendLocalizedMessage(501695); // There is not a spot nearby to place your campfire.
         }
-        else if (!from.CheckSkill(SkillName.Camping, 0.0, 100.0))
+        else if (!Ignites(from))
         {
             from.SendLocalizedMessage(501696); // You fail to ignite the campfire.
         }
         else
         {
-            Consume();
+            UseOne(from);
 
-            if (!Deleted && Parent == null)
+            new Campfire(from).MoveToWorld(fireLocation, from.Map);
+        }
+    }
+
+    private KindlingFeed TryFeed(Mobile from)
+    {
+        if (FeedHandler == null || from.Map == null)
+        {
+            return KindlingFeed.NotHandled;
+        }
+
+        foreach (var fire in from.Map.GetItemsInRange<Campfire>(from.Location, 1))
+        {
+            var result = FeedHandler(from, fire);
+
+            if (result != KindlingFeed.NotHandled)
             {
-                from.PlaceInBackpack(this);
+                return result;
             }
+        }
 
-            new Campfire().MoveToWorld(fireLocation, from.Map);
+        return KindlingFeed.NotHandled;
+    }
+
+    private static bool Ignites(Mobile from) => IgniteCheck?.Invoke(from) ?? from.CheckSkill(SkillName.Camping, 0.0, 100.0);
+
+    private void UseOne(Mobile from)
+    {
+        Consume();
+
+        if (!Deleted && Parent == null)
+        {
+            from.PlaceInBackpack(this);
         }
     }
 

@@ -12,6 +12,32 @@ public enum CampfireStatus
     Off
 }
 
+/// <summary>When a fire dims, burns down to embers, and is gone, as offsets from when it was lit or last fed.</summary>
+public readonly record struct CampfireTiming(TimeSpan Dim, TimeSpan Out, TimeSpan Expire)
+{
+    public static CampfireTiming Stock { get; } = new(
+        TimeSpan.FromSeconds(60.0),
+        TimeSpan.FromSeconds(90.0),
+        TimeSpan.FromSeconds(100.0)
+    );
+
+    /// <summary>The state a fire of this age is in, or null once it is gone.</summary>
+    public CampfireStatus? StatusAt(TimeSpan age)
+    {
+        if (age >= Expire)
+        {
+            return null;
+        }
+
+        if (age >= Out)
+        {
+            return CampfireStatus.Off;
+        }
+
+        return age >= Dim ? CampfireStatus.Extinguishing : CampfireStatus.Burning;
+    }
+}
+
 [SerializationGenerator(0, false)]
 public partial class Campfire : Item
 {
@@ -23,13 +49,50 @@ public partial class Campfire : Item
 
     private TimerExecutionToken _timerToken;
 
-    public Campfire() : base(0xDE3)
+    public Campfire() : this(null)
+    {
+    }
+
+    public Campfire(Mobile lighter) : base(0xDE3)
     {
         Movable = false;
         Light = LightType.Circle300;
 
+        Lighter = lighter;
+        Timing = lighter != null && TimingProvider != null ? TimingProvider(lighter) : CampfireTiming.Stock;
+        LitAt = Core.Now;
+
         _entries = [];
         Timer.StartTimer(TimeSpan.FromSeconds(1.0), TimeSpan.FromSeconds(1.0), OnTick, out _timerToken);
+    }
+
+    /// <summary>Chooses the timing of a fire a mobile lights. Null leaves every fire on the stock timing.</summary>
+    public static Func<Mobile, CampfireTiming> TimingProvider { get; set; }
+
+    public Mobile Lighter { get; private set; }
+
+    public CampfireTiming Timing { get; private set; }
+
+    public DateTime LitAt { get; private set; }
+
+    /// <summary>
+    /// Burns the fire up again from now, as a fire lit with <paramref name="timing" />. A longer timing the fire already
+    /// has is kept, so a weaker feeder cannot shorten it. Embers light again.
+    /// </summary>
+    public void Feed(CampfireTiming timing)
+    {
+        if (Deleted)
+        {
+            return;
+        }
+
+        if (timing.Expire > Timing.Expire)
+        {
+            Timing = timing;
+        }
+
+        LitAt = Core.Now;
+        Status = CampfireStatus.Burning;
     }
 
     public override bool SkipSerialization => true;
@@ -91,19 +154,14 @@ public partial class Campfire : Item
     private void OnTick()
     {
         var now = Core.Now;
-        var age = now - Created;
 
-        if (age >= TimeSpan.FromSeconds(100.0))
+        if (Timing.StatusAt(now - LitAt) is { } status)
+        {
+            Status = status;
+        }
+        else
         {
             Delete();
-        }
-        else if (age >= TimeSpan.FromSeconds(90.0))
-        {
-            Status = CampfireStatus.Off;
-        }
-        else if (age >= TimeSpan.FromSeconds(60.0))
-        {
-            Status = CampfireStatus.Extinguishing;
         }
 
         if (Status == CampfireStatus.Off || Deleted)
@@ -160,6 +218,7 @@ public partial class Campfire : Item
     {
         _timerToken.Cancel();
         ClearEntries();
+        Lighter = null;
     }
 }
 
