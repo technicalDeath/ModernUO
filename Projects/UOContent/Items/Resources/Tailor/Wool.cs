@@ -47,13 +47,49 @@ public partial class Wool : Item, IDyable
             Hue = hue
         });
         from.SendLocalizedMessage(1010576); // You put the balls of yarn in your backpack.
+        SpinningWheelEvents.InvokeSpun(this, wheel, from);
+    }
+
+    // The cursor's reach; SpinOn checks it too, so a spin started without the cursor cannot reach further.
+    private const int WheelRange = 3;
+
+    /// <summary>The stock spin without the cursor: the target uses it, and so can anything repeating it.</summary>
+    public bool SpinOn(Mobile from, ISpinningWheel wheel)
+    {
+        if (Deleted || wheel is not Item wheelItem)
+        {
+            return false;
+        }
+
+        if (!IsChildOf(from.Backpack))
+        {
+            from.SendLocalizedMessage(1042001); // That must be in your pack for you to use it.
+            return false;
+        }
+
+        if (!from.InRange(wheelItem.GetWorldLocation(), WheelRange))
+        {
+            from.SendLocalizedMessage(500446); // That is too far away.
+            return false;
+        }
+
+        if (wheel.Spinning)
+        {
+            from.SendLocalizedMessage(502656); // That spinning wheel is being used.
+            return false;
+        }
+
+        Consume();
+        wheel.BeginSpin(OnSpun, from, Hue);
+        SpinningWheelEvents.InvokeSpinStarted(this, wheel, from);
+        return true;
     }
 
     private class PickWheelTarget : Target
     {
         private readonly Wool m_Wool;
 
-        public PickWheelTarget(Wool wool) : base(3, false, TargetFlags.None) => m_Wool = wool;
+        public PickWheelTarget(Wool wool) : base(WheelRange, false, TargetFlags.None) => m_Wool = wool;
 
         protected override void OnTarget(Mobile from, object targeted)
         {
@@ -71,19 +107,7 @@ public partial class Wool : Item, IDyable
 
             if (wheel is Item)
             {
-                if (!m_Wool.IsChildOf(from.Backpack))
-                {
-                    from.SendLocalizedMessage(1042001); // That must be in your pack for you to use it.
-                }
-                else if (wheel.Spinning)
-                {
-                    from.SendLocalizedMessage(502656); // That spinning wheel is being used.
-                }
-                else
-                {
-                    m_Wool.Consume();
-                    wheel.BeginSpin(m_Wool.OnSpun, from, m_Wool.Hue);
-                }
+                m_Wool.SpinOn(from, wheel);
             }
             else
             {
@@ -112,5 +136,6 @@ public partial class TaintedWool : Wool
             Hue = hue
         });
         from.SendLocalizedMessage(1010574); // You put a ball of yarn in your backpack.
+        SpinningWheelEvents.InvokeSpun(this, wheel, from);
     }
 }

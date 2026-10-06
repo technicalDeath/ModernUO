@@ -47,13 +47,49 @@ public partial class Cotton : Item, IDyable
             Hue = hue
         });
         from.SendLocalizedMessage(1010577); // You put the spools of thread in your backpack.
+        SpinningWheelEvents.InvokeSpun(this, wheel, from);
+    }
+
+    // The cursor's reach; SpinOn checks it too, so a spin started without the cursor cannot reach further.
+    private const int WheelRange = 3;
+
+    /// <summary>The stock spin without the cursor: the target uses it, and so can anything repeating it.</summary>
+    public bool SpinOn(Mobile from, ISpinningWheel wheel)
+    {
+        if (Deleted || wheel is not Item wheelItem)
+        {
+            return false;
+        }
+
+        if (!IsChildOf(from.Backpack))
+        {
+            from.SendLocalizedMessage(1042001); // That must be in your pack for you to use it.
+            return false;
+        }
+
+        if (!from.InRange(wheelItem.GetWorldLocation(), WheelRange))
+        {
+            from.SendLocalizedMessage(500446); // That is too far away.
+            return false;
+        }
+
+        if (wheel.Spinning)
+        {
+            from.SendLocalizedMessage(502656); // That spinning wheel is being used.
+            return false;
+        }
+
+        Consume();
+        wheel.BeginSpin(OnSpun, from, Hue);
+        SpinningWheelEvents.InvokeSpinStarted(this, wheel, from);
+        return true;
     }
 
     private class PickWheelTarget : Target
     {
         private readonly Cotton m_Cotton;
 
-        public PickWheelTarget(Cotton cotton) : base(3, false, TargetFlags.None) => m_Cotton = cotton;
+        public PickWheelTarget(Cotton cotton) : base(WheelRange, false, TargetFlags.None) => m_Cotton = cotton;
 
         protected override void OnTarget(Mobile from, object targeted)
         {
@@ -75,19 +111,7 @@ public partial class Cotton : Item, IDyable
                 return;
             }
 
-            if (!m_Cotton.IsChildOf(from.Backpack))
-            {
-                from.SendLocalizedMessage(1042001); // That must be in your pack for you to use it.
-            }
-            else if (wheel.Spinning)
-            {
-                from.SendLocalizedMessage(502656); // That spinning wheel is being used.
-            }
-            else
-            {
-                m_Cotton.Consume();
-                wheel.BeginSpin(m_Cotton.OnSpun, from, m_Cotton.Hue);
-            }
+            m_Cotton.SpinOn(from, wheel);
         }
     }
 }

@@ -9,6 +9,20 @@ public abstract partial class CookableFood : Item
 {
     private static readonly TimeSpan CookDelay = TimeSpan.FromSeconds(5.0);
 
+    public enum CookResult
+    {
+        Cooked,
+        Burned
+    }
+
+    /// <summary>
+    ///     Raised as an attempt begins (the item is consumed and the timer running) and as it ends, so a distribution can
+    ///     react without replacing the item. The heat source is whatever the player targeted.
+    /// </summary>
+    public static event Action<Mobile, CookableFood, object> CookStarted;
+
+    public static event Action<Mobile, CookableFood, object, CookResult> CookFinished;
+
     [SerializableField(0)]
     [SerializedCommandProperty(AccessLevel.GameMaster)]
     private int _cookingLevel;
@@ -45,13 +59,16 @@ public abstract partial class CookableFood : Item
         return true;
     }
 
-    private static void FinishCooking(Mobile from, IPoint3D heatSource, Map map, CookableFood food)
+    private static void FinishCooking(Mobile from, object targeted, Map map, CookableFood food)
     {
         from.EndAction<CookableFood>();
+
+        var heatSource = targeted as IPoint3D;
 
         if (from.Deleted || from.Map != map || heatSource != null && from.GetDistanceToSqrt(heatSource) > 3)
         {
             from.SendLocalizedMessage(500686); // You burn the food to a crisp! It's ruined.
+            CookFinished?.Invoke(from, food, targeted, CookResult.Burned);
             return;
         }
 
@@ -60,6 +77,7 @@ public abstract partial class CookableFood : Item
         if (!from.CheckSkill(SkillName.Cooking, 0.0, 100.0))
         {
             from.SendLocalizedMessage(500686); // You burn the food to a crisp! It's ruined.
+            CookFinished?.Invoke(from, food, targeted, CookResult.Burned);
             return;
         }
 
@@ -67,6 +85,8 @@ public abstract partial class CookableFood : Item
         {
             from.PlaySound(0x57);
         }
+
+        CookFinished?.Invoke(from, food, targeted, CookResult.Cooked);
     }
 
     private class CookTarget : Target
@@ -92,11 +112,11 @@ public abstract partial class CookableFood : Item
 
             // One item per cook, even from a stack; Consume may delete the stack, which Cook() does not care about.
             var food = _food;
-            var heatSource = targeted as IPoint3D;
             var map = from.Map;
             food.Consume();
 
-            Timer.StartTimer(CookDelay, () => FinishCooking(from, heatSource, map, food));
+            Timer.StartTimer(CookDelay, () => FinishCooking(from, targeted, map, food));
+            CookStarted?.Invoke(from, food, targeted);
         }
     }
 

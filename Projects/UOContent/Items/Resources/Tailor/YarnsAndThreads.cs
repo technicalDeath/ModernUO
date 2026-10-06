@@ -26,6 +26,9 @@ public abstract partial class BaseClothMaterial : Item, IDyable
         return true;
     }
 
+    /// <summary>How many of the stack one use feeds the loom; stock feeds one. A distribution may raise it.</summary>
+    public static System.Func<Mobile, BaseClothMaterial, int> FeedAmount { get; set; }
+
     public override void OnDoubleClick(Mobile from)
     {
         if (IsChildOf(from.Backpack))
@@ -65,26 +68,48 @@ public abstract partial class BaseClothMaterial : Item, IDyable
                 {
                     from.SendLocalizedMessage(1042001); // That must be in your pack for you to use it.
                 }
-                else if (loom.Phase < 4)
-                {
-                    m_Material.Consume();
-
-                    if (targeted is Item item)
-                    {
-                        item.SendLocalizedMessageTo(from, 1010001 + loom.Phase++);
-                    }
-                }
                 else
                 {
-                    var create = new BoltOfCloth
-                    {
-                        Hue = m_Material.Hue
-                    };
+                    var feed = FeedAmount?.Invoke(from, m_Material) ?? 1;
 
-                    m_Material.Consume();
-                    loom.Phase = 0;
-                    from.SendLocalizedMessage(500368); // You create some cloth and put it in your backpack.
-                    from.AddToBackpack(create);
+                    if (feed < 1)
+                    {
+                        feed = 1;
+                    }
+                    else if (feed > m_Material.Amount)
+                    {
+                        feed = m_Material.Amount;
+                    }
+
+                    var hue = m_Material.Hue;
+                    var bolts = 0;
+
+                    for (var i = 0; i < feed; i++)
+                    {
+                        m_Material.Consume();
+
+                        if (loom.Phase < 4)
+                        {
+                            loom.Phase++;
+                        }
+                        else
+                        {
+                            loom.Phase = 0;
+                            bolts++;
+                            from.AddToBackpack(new BoltOfCloth { Hue = hue });
+                        }
+                    }
+
+                    if (bolts > 0)
+                    {
+                        from.SendLocalizedMessage(500368); // You create some cloth and put it in your backpack.
+                    }
+
+                    // The stock progress line for where the loom stands now (1010001 is the first thread laid).
+                    if (loom.Phase > 0 && targeted is Item item)
+                    {
+                        item.SendLocalizedMessageTo(from, 1010000 + loom.Phase);
+                    }
                 }
             }
             else

@@ -18,10 +18,27 @@ public interface ILockpickable : IPoint2D
     void LockPick(Mobile from);
 }
 
+public enum LockpickResult
+{
+    Picked,
+    Failed,
+    OutOfRange,
+    CannotPick,
+    NoSkill
+}
+
 [Flippable(0x14fc, 0x14fb)]
 [SerializationGenerator(0, false)]
 public partial class Lockpick : Item
 {
+    /// <summary>
+    ///     Raised as an attempt on a lock begins and as it ends, so a distribution can react without replacing the
+    ///     item. Refusals before an attempt begins (not locked, not a lock) raise nothing.
+    /// </summary>
+    public static event Action<Mobile, ILockpickable, Lockpick> AttemptStarted;
+
+    public static event Action<Mobile, ILockpickable, Lockpick, LockpickResult> AttemptEnded;
+
     [Constructible]
     public Lockpick(int amount = 1) : base(0x14FC)
     {
@@ -33,6 +50,33 @@ public partial class Lockpick : Item
     {
         from.SendLocalizedMessage(502068); // What do you want to pick?
         from.Target = new InternalTarget(this);
+    }
+
+    /// <summary>The stock attempt without the cursor: the target uses it, and so can anything repeating it.</summary>
+    public void BeginPick(Mobile from, ILockpickable lockpickable)
+    {
+        if (Deleted)
+        {
+            return;
+        }
+
+        if (lockpickable is Item item && lockpickable.Locked)
+        {
+            if (item.RootParent != from)
+            {
+                from.Direction = from.GetDirectionTo(item);
+            }
+
+            from.PlaySound(0x241);
+
+            new InternalTimer(from, lockpickable, this).Start();
+            AttemptStarted?.Invoke(from, lockpickable, this);
+        }
+        else
+        {
+            // The door is not locked
+            from.SendLocalizedMessage(502069); // This does not appear to be locked
+        }
     }
 
     private class InternalTarget : Target
@@ -50,95 +94,87 @@ public partial class Lockpick : Item
 
             if (targeted is ILockpickable lockpickable)
             {
-                if (lockpickable is Item item && lockpickable.Locked)
-                {
-                    if (item.RootParent != from)
-                    {
-                        from.Direction = from.GetDirectionTo(item);
-                    }
-
-                    from.PlaySound(0x241);
-
-                    new InternalTimer(from, lockpickable, m_Item).Start();
-                }
-                else
-                {
-                    // The door is not locked
-                    from.SendLocalizedMessage(502069); // This does not appear to be locked
-                }
+                m_Item.BeginPick(from, lockpickable);
             }
             else
             {
                 from.SendLocalizedMessage(501666); // You can't unlock that!
             }
         }
+    }
 
-        private class InternalTimer : Timer
+    private class InternalTimer : Timer
+    {
+        private readonly Mobile _from;
+        private readonly ILockpickable _item;
+        private readonly Lockpick _lockpick;
+
+        public InternalTimer(Mobile from, ILockpickable item, Lockpick lockpick) : base(TimeSpan.FromSeconds(3.0))
         {
-            private readonly Mobile _from;
-            private readonly ILockpickable _item;
-            private readonly Lockpick _lockpick;
+            _from = from;
+            _item = item;
+            _lockpick = lockpick;
+        }
 
-            public InternalTimer(Mobile from, ILockpickable item, Lockpick lockpick) : base(TimeSpan.FromSeconds(3.0))
-            {
-                _from = from;
-                _item = item;
-                _lockpick = lockpick;
-            }
-
-            protected void BrokeLockPickTest()
-            {
-                // When failed, a 25% chance to break the lockpick
-                if (Utility.Random(4) == 0)
-                {
-                    var item = (Item)_item;
-
-                    // You broke the lockpick.
-                    item.SendLocalizedMessageTo(_from, 502074);
-
-                    _from.PlaySound(0x3A4);
-                    _lockpick.Consume();
-                }
-            }
-
-            protected override void OnTick()
+        protected void BrokeLockPickTest()
+        {
+            // When failed, a 25% chance to break the lockpick
+            if (Utility.Random(4) == 0)
             {
                 var item = (Item)_item;
 
-                if (!_from.InRange(item.GetWorldLocation(), 1))
-                {
-                    return;
-                }
+                // You broke the lockpick.
+                item.SendLocalizedMessageTo(_from, 502074);
 
-                if (_item.LockLevel is ILockpickable.CannotPick or ILockpickable.MagicLock)
-                {
-                    // LockLevel of 0 means that the door can't be picklocked
-                    // LockLevel of -255 means it's magic locked
-                    item.SendLocalizedMessageTo(_from, 502073); // This lock cannot be picked by normal means
-                    return;
-                }
-
-                if (_from.Skills.Lockpicking.Value < _item.RequiredSkill)
-                {
-                    // The LockLevel is higher thant the LockPicking of the player
-                    item.SendLocalizedMessageTo(_from, 502072); // You don't see how that lock can be manipulated.
-                    return;
-                }
-
-                if (_from.CheckTargetSkill(SkillName.Lockpicking, _item, _item.LockLevel, _item.MaxLockLevel))
-                {
-                    // Success! Pick the lock!
-                    item.SendLocalizedMessageTo(_from, 502076); // The lock quickly yields to your skill.
-                    _from.PlaySound(0x4A);
-                    _item.LockPick(_from);
-                }
-                else
-                {
-                    // The player failed to pick the lock
-                    BrokeLockPickTest();
-                    item.SendLocalizedMessageTo(_from, 502075); // You are unable to pick the lock.
-                }
+                _from.PlaySound(0x3A4);
+                _lockpick.Consume();
             }
         }
+
+        protected override void OnTick()
+        {
+            var item = (Item)_item;
+
+            if (!_from.InRange(item.GetWorldLocation(), 1))
+            {
+                End(LockpickResult.OutOfRange);
+                return;
+            }
+
+            if (_item.LockLevel is ILockpickable.CannotPick or ILockpickable.MagicLock)
+            {
+                // LockLevel of 0 means that the door can't be picklocked
+                // LockLevel of -255 means it's magic locked
+                item.SendLocalizedMessageTo(_from, 502073); // This lock cannot be picked by normal means
+                End(LockpickResult.CannotPick);
+                return;
+            }
+
+            if (_from.Skills.Lockpicking.Value < _item.RequiredSkill)
+            {
+                // The LockLevel is higher thant the LockPicking of the player
+                item.SendLocalizedMessageTo(_from, 502072); // You don't see how that lock can be manipulated.
+                End(LockpickResult.NoSkill);
+                return;
+            }
+
+            if (_from.CheckTargetSkill(SkillName.Lockpicking, _item, _item.LockLevel, _item.MaxLockLevel))
+            {
+                // Success! Pick the lock!
+                item.SendLocalizedMessageTo(_from, 502076); // The lock quickly yields to your skill.
+                _from.PlaySound(0x4A);
+                _item.LockPick(_from);
+                End(LockpickResult.Picked);
+            }
+            else
+            {
+                // The player failed to pick the lock
+                BrokeLockPickTest();
+                item.SendLocalizedMessageTo(_from, 502075); // You are unable to pick the lock.
+                End(LockpickResult.Failed);
+            }
+        }
+
+        private void End(LockpickResult result) => AttemptEnded?.Invoke(_from, _item, _lockpick, result);
     }
 }

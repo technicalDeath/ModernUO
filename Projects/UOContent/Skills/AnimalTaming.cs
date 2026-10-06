@@ -10,11 +10,26 @@ using Server.Targeting;
 
 namespace Server.SkillHandlers
 {
+    public enum TameResult
+    {
+        Tamed,
+        Failed,
+        Aborted
+    }
+
     public static class AnimalTaming
     {
         private static readonly HashSet<Mobile> m_BeingTamed = new();
 
         public static bool DisableMessage { get; set; }
+
+        /// <summary>
+        ///     Raised as an attempt begins (its timer is running) and as it ends, so a distribution can react without
+        ///     replacing the handler. Refusals before an attempt begins raise nothing.
+        /// </summary>
+        public static event Action<Mobile, BaseCreature> AttemptStarted;
+
+        public static event Action<Mobile, BaseCreature, TameResult> AttemptEnded;
 
         public static void Initialize()
         {
@@ -253,6 +268,7 @@ namespace Server.SkillHandlers
                     new InternalTimer(from, creature, Utility.Random(3, 2)).Start();
 
                     m_SetSkillTime = false;
+                    AttemptStarted?.Invoke(from, creature);
                 }
             }
 
@@ -293,7 +309,7 @@ namespace Server.SkillHandlers
                         m_Tamer.NextSkillTime = Core.TickCount;
                         // You are too far away to continue taming.
                         m_Creature.PrivateOverheadMessage(MessageType.Regular, 0x3B2, 502795, m_Tamer.NetState);
-                        Stop();
+                        End(TameResult.Aborted);
                     }
                     else if (!m_Tamer.CheckAlive())
                     {
@@ -301,7 +317,7 @@ namespace Server.SkillHandlers
                         m_Tamer.NextSkillTime = Core.TickCount;
                         // You are dead, and cannot continue taming.
                         m_Creature.PrivateOverheadMessage(MessageType.Regular, 0x3B2, 502796, m_Tamer.NetState);
-                        Stop();
+                        End(TameResult.Aborted);
                     }
                     else if (!m_Tamer.CanSee(m_Creature) || !m_Tamer.InLOS(m_Creature) || !CanPath())
                     {
@@ -309,7 +325,7 @@ namespace Server.SkillHandlers
                         m_Tamer.NextSkillTime = Core.TickCount;
                         // You do not have a clear path to the animal you are taming, and must cease your attempt.
                         m_Tamer.SendLocalizedMessage(1049654);
-                        Stop();
+                        End(TameResult.Aborted);
                     }
                     else if (!m_Creature.Tamable)
                     {
@@ -317,7 +333,7 @@ namespace Server.SkillHandlers
                         m_Tamer.NextSkillTime = Core.TickCount;
                         // That creature cannot be tamed.
                         m_Creature.PrivateOverheadMessage(MessageType.Regular, 0x3B2, 1049655, m_Tamer.NetState);
-                        Stop();
+                        End(TameResult.Aborted);
                     }
                     else if (m_Creature.Controlled)
                     {
@@ -325,7 +341,7 @@ namespace Server.SkillHandlers
                         m_Tamer.NextSkillTime = Core.TickCount;
                         // That animal looks tame already.
                         m_Creature.PrivateOverheadMessage(MessageType.Regular, 0x3B2, 502804, m_Tamer.NetState);
-                        Stop();
+                        End(TameResult.Aborted);
                     }
                     else if (m_Creature.Owners.Count >= BaseCreature.MaxOwners && !m_Creature.Owners.Contains(m_Tamer))
                     {
@@ -333,7 +349,7 @@ namespace Server.SkillHandlers
                         m_Tamer.NextSkillTime = Core.TickCount;
                         // This animal has had too many owners and is too upset for you to tame.
                         m_Creature.PrivateOverheadMessage(MessageType.Regular, 0x3B2, 1005615, m_Tamer.NetState);
-                        Stop();
+                        End(TameResult.Aborted);
                     }
                     else if (MustBeSubdued(m_Creature))
                     {
@@ -341,7 +357,7 @@ namespace Server.SkillHandlers
                         m_Tamer.NextSkillTime = Core.TickCount;
                         // You must subdue this creature before you can tame it!
                         m_Creature.PrivateOverheadMessage(MessageType.Regular, 0x3B2, 1054025, m_Tamer.NetState);
-                        Stop();
+                        End(TameResult.Aborted);
                     }
                     else if (de?.LastDamage > m_StartTime)
                     {
@@ -349,7 +365,7 @@ namespace Server.SkillHandlers
                         m_Tamer.NextSkillTime = Core.TickCount;
                         // The animal is too angry to continue taming.
                         m_Creature.PrivateOverheadMessage(MessageType.Regular, 0x3B2, 502794, m_Tamer.NetState);
-                        Stop();
+                        End(TameResult.Aborted);
                     }
                     else if (m_Count < m_MaxCount)
                     {
@@ -451,13 +467,21 @@ namespace Server.SkillHandlers
                             m_Creature.IsBonded = false;
                             m_Creature.ControlTarget = m_Tamer;
                             m_Creature.ControlOrder = OrderType.Follow;
+                            AttemptEnded?.Invoke(m_Tamer, m_Creature, TameResult.Tamed);
                         }
                         else
                         {
                             // You fail to tame the creature.
                             m_Creature.PrivateOverheadMessage(MessageType.Regular, 0x3B2, 502798, m_Tamer.NetState);
+                            AttemptEnded?.Invoke(m_Tamer, m_Creature, TameResult.Failed);
                         }
                     }
+                }
+
+                private void End(TameResult result)
+                {
+                    Stop();
+                    AttemptEnded?.Invoke(m_Tamer, m_Creature, result);
                 }
 
                 private bool CanPath()
