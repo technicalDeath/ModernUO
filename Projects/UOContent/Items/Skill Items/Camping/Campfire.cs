@@ -45,6 +45,8 @@ public partial class Campfire : Item
 
     private static readonly Dictionary<Mobile, CampfireEntry> _table = [];
 
+    private static readonly HashSet<Campfire> _active = [];
+
     private readonly List<CampfireEntry> _entries;
 
     private TimerExecutionToken _timerToken;
@@ -61,10 +63,15 @@ public partial class Campfire : Item
         Lighter = lighter;
         Timing = lighter != null && TimingProvider != null ? TimingProvider(lighter) : CampfireTiming.Stock;
         LitAt = Core.Now;
+        CreatedAt = LitAt;
 
+        _active.Add(this);
         _entries = [];
         Timer.StartTimer(TimeSpan.FromSeconds(1.0), TimeSpan.FromSeconds(1.0), OnTick, out _timerToken);
     }
+
+    /// <summary>Every fire that currently exists. Fires are never saved, so this needs no rebuild after a restart.</summary>
+    public static IReadOnlyCollection<Campfire> Active => _active;
 
     /// <summary>Chooses the timing of a fire a mobile lights. Null leaves every fire on the stock timing.</summary>
     public static Func<Mobile, CampfireTiming> TimingProvider { get; set; }
@@ -74,6 +81,9 @@ public partial class Campfire : Item
     public CampfireTiming Timing { get; private set; }
 
     public DateTime LitAt { get; private set; }
+
+    /// <summary>When the fire was first lit. Unlike <see cref="LitAt" />, feeding does not move it.</summary>
+    public DateTime CreatedAt { get; }
 
     /// <summary>
     /// Burns the fire up again from now, as a fire lit with <paramref name="timing" />. A longer timing the fire already
@@ -218,6 +228,7 @@ public partial class Campfire : Item
     {
         _timerToken.Cancel();
         ClearEntries();
+        _active.Remove(this);
         Lighter = null;
     }
 }

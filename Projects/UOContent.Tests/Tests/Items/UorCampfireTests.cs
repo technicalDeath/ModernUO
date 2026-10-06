@@ -76,6 +76,40 @@ public class UorCampfireTests
     }
 
     [Fact]
+    public void ALitFireIsListedAsActiveUntilItIsDeleted()
+    {
+        var fire = new Campfire();
+
+        Assert.Contains(fire, Campfire.Active);
+
+        fire.Delete();
+
+        Assert.DoesNotContain(fire, Campfire.Active);
+    }
+
+    [Fact]
+    public void Feed_MovesLitAtButNotCreatedAt()
+    {
+        var fire = new Campfire();
+
+        try
+        {
+            var created = fire.CreatedAt;
+
+            Assert.Equal(created, fire.LitAt);
+
+            fire.Feed(Long);
+
+            Assert.Equal(created, fire.CreatedAt);
+            Assert.True(fire.LitAt >= created);
+        }
+        finally
+        {
+            fire.Delete();
+        }
+    }
+
+    [Fact]
     public void ANewFireWithoutAProviderOrLighterUsesTheStockTiming()
     {
         var fire = new Campfire();

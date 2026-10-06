@@ -22,6 +22,8 @@ namespace Server.Spells.Fourth
 
         private readonly RunebookEntry m_Entry;
 
+        private bool _travelConfirmed;
+
         public RecallSpell(Mobile caster, Item scroll) : base(caster, scroll, _info)
         {
         }
@@ -88,6 +90,11 @@ namespace Server.Spells.Fourth
             {
                 Caster.SendLocalizedMessage(502412); // There are no charges left on that item.
             }
+            else if (!_travelConfirmed &&
+                     SpellHelper.TravelConfirmation?.Invoke(Caster, map, loc, () => ConfirmedEffect(loc, map, checkMulti)) == true)
+            {
+                // Asked to confirm; the spell has used nothing yet, and ConfirmedEffect carries on if they agree.
+            }
             else if (CheckSequence())
             {
                 BaseCreature.TeleportPets(Caster, loc, map, true);
@@ -100,6 +107,30 @@ namespace Server.Spells.Fourth
                 Caster.PlaySound(0x1FC);
                 Caster.MoveToWorld(loc, map);
                 Caster.PlaySound(0x1FC);
+            }
+        }
+
+        /// <summary>Carries a cast on after the traveler confirmed. The finished spell is revived for this one call.</summary>
+        private void ConfirmedEffect(Point3D loc, Map map, bool checkMulti)
+        {
+            if (Caster.Deleted || !Caster.Alive || Caster.Spell != null)
+            {
+                Caster.SendLocalizedMessage(1049616); // You are too busy to do that at the moment.
+                return;
+            }
+
+            Caster.Spell = this;
+            State = SpellState.Sequencing;
+            _travelConfirmed = true;
+
+            try
+            {
+                Effect(loc, map, checkMulti);
+            }
+            finally
+            {
+                _travelConfirmed = false;
+                FinishSequence();
             }
         }
 

@@ -479,7 +479,15 @@ public class MoongateGump : DynamicGump
             return;
         }
 
-        var entry = list.Entries[listEntry];
+        Travel(from, list, list.Entries[listEntry], false);
+    }
+
+    private void Travel(Mobile from, PMList list, PMEntry entry, bool confirmed)
+    {
+        if (_moongate.Deleted)
+        {
+            return;
+        }
 
         if (!from.InRange(_moongate.GetWorldLocation(), 1) || from.Map != _moongate.Map)
         {
@@ -505,6 +513,11 @@ public class MoongateGump : DynamicGump
         else if (from.Map == list.Map && from.InRange(entry.Location, 1))
         {
             from.SendLocalizedMessage(1019003); // You are already there.
+        }
+        else if (!confirmed &&
+                 SpellHelper.TravelConfirmation?.Invoke(from, list.Map, entry.Location, () => Travel(from, list, entry, true)) == true)
+        {
+            // Asked to confirm; nothing has happened yet.
         }
         else
         {

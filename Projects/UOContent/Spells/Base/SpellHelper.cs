@@ -603,6 +603,13 @@ namespace Server.Spells
             };
         }
 
+        /// <summary>
+        /// Lets a shard ask a traveler to confirm before Recall or a moongate takes them somewhere. Return true after showing
+        /// a prompt: nothing has been spent, and <c>proceed</c> carries the trip on if the traveler confirms. Null (the
+        /// default) leaves every trip as stock.
+        /// </summary>
+        public static Func<Mobile, Map, Point3D, Action, bool> TravelConfirmation { get; set; }
+
         public static bool CheckTravel(Mobile caster, TravelCheckType type, out TextDefinition message) =>
             CheckTravel(caster, caster.Map, caster.Location, type, out message);
 

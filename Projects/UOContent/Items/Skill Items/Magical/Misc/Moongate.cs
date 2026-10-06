@@ -6,6 +6,7 @@ using Server.Misc;
 using Server.Mobiles;
 using Server.Network;
 using Server.Regions;
+using Server.Spells;
 
 namespace Server.Items;
 
@@ -149,6 +150,12 @@ public partial class Moongate : Item
 
     public virtual void BeginConfirmation(Mobile from)
     {
+        if (TargetMap != null &&
+            SpellHelper.TravelConfirmation?.Invoke(from, TargetMap, Target, () => EndConfirmation(from)) == true)
+        {
+            return;
+        }
+
         if (IsInTown(from.Location, from.Map) && !IsInTown(Target, TargetMap) ||
             from.Map != Map.Felucca && TargetMap == Map.Felucca && ShowFeluccaWarning)
         {
