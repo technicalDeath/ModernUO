@@ -130,11 +130,13 @@ public static class SkillCheck
             if (skill.Base < 10.0) // Gain regardless of the AllowGain check
             {
                 // Bank restoration still requires the ordinary anti-macro boundary, while
-                // stock sub-10 gains retain their legacy unconditional behavior.
+                // stock sub-10 gains retain their legacy unconditional behavior. The gain is a real
+                // skill use either way, so any skill it displaces is published (and can be banked)
+                // even when the anti-macro boundary refused the restoration.
                 var eligible = AllowGain(from, skill, amObj);
                 if (!eligible || !SkillEvents.InvokeSkillGainOverride(from, skill, success))
                 {
-                    Gain(from, skill, organicAttempt: eligible);
+                    Gain(from, skill, organicAttempt: true);
                 }
             }
             else if (AllowGain(from, skill, amObj))

@@ -269,7 +269,7 @@ public class SkillEventsTests
     }
 
     [Fact]
-    public void SubTenAntiMacroDenialCannotBankItsStockCapDisplacement()
+    public void SubTenAntiMacroDenialStillBanksItsStockCapDisplacement()
     {
         if (AntiMacroSystem.Settings == null)
         {
@@ -311,10 +311,13 @@ public class SkillEventsTests
             var activeAfterEligibleUse = gaining.BaseFixedPoint;
             var displacedAfterEligibleUse = displaced.BaseFixedPoint;
 
+            // The second use is refused by the anti-macro boundary, but the stock sub-10 gain still happens and still
+            // takes points from the Down skill. Owner ruling 2026-10-07: every point a Down skill loses is published,
+            // so the bank can keep it.
             SkillCheck.CheckSkill(player, gaining, target, 0.5);
             Assert.True(gaining.BaseFixedPoint > activeAfterEligibleUse);
             Assert.True(displaced.BaseFixedPoint < displacedAfterEligibleUse);
-            Assert.Equal(bankableAfterEligibleUse, reportedTenths);
+            Assert.Equal(bankableAfterEligibleUse + (displacedAfterEligibleUse - displaced.BaseFixedPoint), reportedTenths);
         }
         finally
         {
