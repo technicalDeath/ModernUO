@@ -29,6 +29,24 @@ namespace Server.Spells.Seventh
 
         public override SpellCircle Circle => SpellCircle.Seventh;
 
+        /// <summary>True while <paramref name="m"/> is polymorphed by this spell (the spell holds its action lock for the whole effect).</summary>
+        public static bool UnderEffect(Mobile m) => !m.CanBeginAction<PolymorphSpell>();
+
+        /// <summary>When the polymorph ends, if the spell is running its own timer (before Mondain's Legacy it does).</summary>
+        public static bool TryGetEnd(Mobile m, out DateTime end)
+        {
+            if (_table.TryGetValue(m, out var timer))
+            {
+                end = timer.Next;
+
+                return true;
+            }
+
+            end = default;
+
+            return false;
+        }
+
         public override bool CheckCast()
         {
             var caster = Caster;

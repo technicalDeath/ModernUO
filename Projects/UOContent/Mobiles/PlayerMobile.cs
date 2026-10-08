@@ -1264,6 +1264,23 @@ namespace Server.Mobiles
         /// <summary>Optional shard-owned observer invoked after the stock player-death event.</summary>
         public static Action<PlayerMobile> PlayerDeathHandler { get; set; }
 
+        /// <summary>Optional shard-owned: returns the name suffix (shown after the name on a click and in the tooltip) with the shard's own tag added.</summary>
+        public static Func<PlayerMobile, string, string> NameSuffixHandler { get; set; }
+
+        /// <summary>
+        ///     Optional shard-owned: extra bits OR-ed into this player's packet flags. Runs for every observer on every move, so it must be O(1).
+        ///     The shard sets 0x20, which the protocol leaves unused for mobiles, to mean "lying down" to its own client.
+        /// </summary>
+        public static Func<PlayerMobile, int> ExtraPacketFlagsHandler { get; set; }
+
+        public override int GetPacketFlags(bool stygianAbyss) =>
+            base.GetPacketFlags(stygianAbyss) | (ExtraPacketFlagsHandler?.Invoke(this) ?? 0);
+
+        public delegate void ContextMenuEntriesDelegate(PlayerMobile target, Mobile from, ref PooledRefList<ContextMenuEntry> list);
+
+        /// <summary>Optional shard-owned: adds entries to the context menu <c>from</c> opens on this player.</summary>
+        public static ContextMenuEntriesDelegate ContextMenuEntriesHandler { get; set; }
+
         [OnEvent(nameof(PlayerLoginEvent))]
         public static void OnLogin(PlayerMobile from)
         {
@@ -2003,6 +2020,8 @@ namespace Server.Mobiles
                     list.Add(new EjectPlayerEntry());
                 }
             }
+
+            ContextMenuEntriesHandler?.Invoke(this, from, ref list);
         }
 
         private void CancelProtection()
@@ -4061,7 +4080,7 @@ namespace Server.Mobiles
                 }
             }
 
-            return base.ApplyNameSuffix(suffix);
+            return base.ApplyNameSuffix(NameSuffixHandler?.Invoke(this, suffix) ?? suffix);
         }
 
         public override TimeSpan GetLogoutDelay()
@@ -4315,6 +4334,13 @@ namespace Server.Mobiles
         public void AddBuff(BuffInfo b)
         {
             if (!BuffInfo.Enabled || b == null)
+            {
+                return;
+            }
+
+            b = BuffInfo.Present(this, b);
+
+            if (b == null)
             {
                 return;
             }

@@ -30,6 +30,11 @@ namespace Server.Spells.Second
 
         public static Dictionary<Mobile, int> Registry { get; } = new();
 
+        // When each UOR Protection ends. The spell's own timer is private, so the end is kept here for anything that shows a countdown.
+        private static readonly Dictionary<Mobile, DateTime> _ends = new();
+
+        public static bool TryGetEnd(Mobile m, out DateTime end) => _ends.TryGetValue(m, out end);
+
         public override SpellCircle Circle => SpellCircle.Second;
 
         public static bool HasT2AProtection(Mobile m) => _t2aTable?.ContainsKey(m) ?? false;
@@ -163,6 +168,7 @@ namespace Server.Spells.Second
             }
 
             Registry.Remove(m);
+            _ends.Remove(m);
 
             m.RemoveResistanceMod(mods.Item1);
             m.RemoveSkillMod(mods.Item2);
@@ -206,6 +212,7 @@ namespace Server.Spells.Second
                         Registry.Add(Caster, Math.Clamp((int)value, 0, 750)); // 75.0% protection from disruption
                         var duration = TimeSpan.FromSeconds(Math.Clamp(Caster.Skills.Magery.Value * 2.0, 15, 240));
                         new InternalTimer(Caster, duration).Start();
+                        _ends[Caster] = Core.Now + duration;
 
                         Caster.FixedParticles(0x375A, 9, 20, 5016, EffectLayer.Waist);
                         Caster.PlaySound(0x1ED);
@@ -235,6 +242,7 @@ namespace Server.Spells.Second
                 else
                 {
                     Registry.Remove(_mobile);
+                    _ends.Remove(_mobile);
                     DefensiveSpell.Nullify(_mobile);
                 }
             }

@@ -21,6 +21,17 @@ namespace Server.Spells.Fourth
 
         private static readonly Dictionary<Mobile, int> _table = new();
 
+        // When each target's protection ends: the timer is private, and the caster's skill sets the length, so it is kept here.
+        private static readonly Dictionary<Mobile, DateTime> _ends = new();
+
+        /// <summary>The armor an Arch Protection gave <paramref name="m"/>, and when it ends.</summary>
+        public static bool TryGetEffect(Mobile m, out int bonus, out DateTime end)
+        {
+            end = default;
+
+            return _table.TryGetValue(m, out bonus) && _ends.TryGetValue(m, out end);
+        }
+
         public ArchProtectionSpell(Mobile caster, Item scroll = null) : base(caster, scroll, _info)
         {
         }
@@ -85,6 +96,7 @@ namespace Server.Spells.Fourth
                 else
                 {
                     var val = (int)(Caster.Skills.Magery.Value / 10.0 + 1);
+                    var delay = InternalTimer.GetDelay(Caster);
 
                     while (targets.Count > 0)
                     {
@@ -94,8 +106,8 @@ namespace Server.Spells.Fourth
                             Caster.DoBeneficial(m);
                             m.VirtualArmorMod += val;
 
-                            AddEntry(m, val);
-                            new InternalTimer(m, Caster).Start();
+                            AddEntry(m, val, Core.Now + delay);
+                            new InternalTimer(m, delay).Start();
 
                             m.FixedParticles(0x375A, 9, 20, 5027, EffectLayer.Waist);
                             m.PlaySound(0x1F7);
@@ -110,15 +122,17 @@ namespace Server.Spells.Fourth
             Caster.Target = new SpellTarget<IPoint3D>(this, allowGround: true);
         }
 
-        private static void AddEntry(Mobile m, int v)
+        private static void AddEntry(Mobile m, int v, DateTime end)
         {
             _table[m] = v;
+            _ends[m] = end;
         }
 
         public static void RemoveEntry(Mobile m)
         {
             if (_table.Remove(m, out var v))
             {
+                _ends.Remove(m);
                 m.EndAction<ArchProtectionSpell>();
                 m.VirtualArmorMod -= Math.Min(v, m.VirtualArmorMod);
             }
@@ -128,9 +142,9 @@ namespace Server.Spells.Fourth
         {
             private readonly Mobile _owner;
 
-            public InternalTimer(Mobile target, Mobile caster) : base(GetDelay(caster)) => _owner = target;
+            public InternalTimer(Mobile target, TimeSpan delay) : base(delay) => _owner = target;
 
-            private static TimeSpan GetDelay(Mobile caster) =>
+            public static TimeSpan GetDelay(Mobile caster) =>
                 TimeSpan.FromSeconds(Math.Min(144, caster.Skills.Magery.Value * 1.2));
 
             protected override void OnTick()

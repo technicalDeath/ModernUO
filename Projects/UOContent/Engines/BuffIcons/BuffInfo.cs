@@ -29,6 +29,15 @@ public class BuffInfo
 
     public static bool Enabled { get; private set; }
 
+    /// <summary>
+    /// Lets a shard decide what a buff shows before it is added: return the buff as it is, a replacement for the same icon, or null to
+    /// show nothing. Every spell, potion and ability adds its icon through <see cref="PlayerMobile.AddBuff" />, and the stock text is
+    /// the later eras' (percentages, resistances), so this is the one place to correct it.
+    /// </summary>
+    public static Func<PlayerMobile, BuffInfo, BuffInfo> Override { get; set; }
+
+    public static BuffInfo Present(PlayerMobile m, BuffInfo b) => b == null || Override == null ? b : Override(m, b);
+
     public BuffIcon ID { get; }
 
     public int TitleCliloc { get; }
