@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Server;
 using Server.Collections;
 using Server.ContextMenus;
@@ -9,6 +11,22 @@ namespace UOContent.Tests;
 [Collection("Sequential UOContent Tests")]
 public class PlayerMobileShardHookTests
 {
+    // The shard runs UOR, where the old guild system is in force (the new one is Core.SE) and a Guild or Alliance line reaches the hook.
+    private static void InExpansion(Expansion expansion, Action test)
+    {
+        var previous = Core.Expansion;
+
+        try
+        {
+            Core.Expansion = expansion;
+            test();
+        }
+        finally
+        {
+            Core.Expansion = previous;
+        }
+    }
+
     [Fact]
     public void ANameSuffixHandlerAddsItsTagToTheSuffix()
     {
@@ -83,4 +101,124 @@ public class PlayerMobileShardHookTests
             PlayerMobile.ContextMenuEntriesHandler = null;
         }
     }
+
+    [Theory]
+    [InlineData(MessageType.Guild)]
+    [InlineData(MessageType.Alliance)]
+    public void AGuildSpeechHandlerIsGivenAGuildOrAllianceLineAndTakesItWhenItReturnsTrue(MessageType type) =>
+        InExpansion(
+            Expansion.UOR,
+            () =>
+            {
+                var player = new PlayerMobile(World.NewMobile) { Name = "Tester" };
+                var calls = new List<(PlayerMobile Speaker, string Text, MessageType Type, int Hue)>();
+
+                try
+                {
+                    PlayerMobile.GuildSpeechHandler = (speaker, text, kind, hue) =>
+                    {
+                        calls.Add((speaker, text, kind, hue));
+
+                        return true;
+                    };
+
+                    player.DoSpeech("hello guild", [], type, 0x44);
+
+                    Assert.Equal([(player, "hello guild", type, 0x44)], calls);
+                }
+                finally
+                {
+                    PlayerMobile.GuildSpeechHandler = null;
+                }
+            }
+        );
+
+    [Fact]
+    public void AGuildSpeechHandlerIsNotAskedAboutOrdinarySpeech() =>
+        InExpansion(
+            Expansion.UOR,
+            () =>
+            {
+                var player = new PlayerMobile(World.NewMobile) { Name = "Tester" };
+                var asked = 0;
+
+                try
+                {
+                    PlayerMobile.GuildSpeechHandler = (_, _, _, _) =>
+                    {
+                        asked++;
+
+                        return true;
+                    };
+
+                    player.DoSpeech("hello", [], MessageType.Regular, 0x3B2);
+                    player.DoSpeech("hello", [], MessageType.Whisper, 0x3B2);
+                    player.DoSpeech("hello", [], MessageType.Yell, 0x3B2);
+
+                    Assert.Equal(0, asked);
+                }
+                finally
+                {
+                    PlayerMobile.GuildSpeechHandler = null;
+                }
+            }
+        );
+
+    [Fact]
+    public void AGuildSpeechHandlerThatReturnsFalseLeavesTheStockPathToRun() =>
+        InExpansion(
+            Expansion.UOR,
+            () =>
+            {
+                var player = new PlayerMobile(World.NewMobile) { Name = "Tester" };
+                var asked = 0;
+
+                try
+                {
+                    PlayerMobile.GuildSpeechHandler = (_, _, _, _) =>
+                    {
+                        asked++;
+
+                        return false;
+                    };
+
+                    player.DoSpeech("hello guild", [], MessageType.Guild, 0x44);
+
+                    Assert.Equal(1, asked);
+                }
+                finally
+                {
+                    PlayerMobile.GuildSpeechHandler = null;
+                }
+            }
+        );
+
+    [Fact]
+    public void TheNewGuildSystemKeepsItsOwnChatAndNeverAsksTheHandler() =>
+        InExpansion(
+            Expansion.SE,
+            () =>
+            {
+                var player = new PlayerMobile(World.NewMobile) { Name = "Tester" };
+                var asked = 0;
+
+                try
+                {
+                    PlayerMobile.GuildSpeechHandler = (_, _, _, _) =>
+                    {
+                        asked++;
+
+                        return true;
+                    };
+
+                    player.DoSpeech("hello guild", [], MessageType.Guild, 0x44);
+
+                    Assert.Equal(0, asked);
+                }
+                finally
+                {
+                    PlayerMobile.GuildSpeechHandler = null;
+                }
+            }
+        );
 }

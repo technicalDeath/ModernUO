@@ -1281,6 +1281,14 @@ namespace Server.Mobiles
         /// <summary>Optional shard-owned: adds entries to the context menu <c>from</c> opens on this player.</summary>
         public static ContextMenuEntriesDelegate ContextMenuEntriesHandler { get; set; }
 
+        /// <summary>
+        ///     Optional shard-owned: handles a Guild or Alliance chat line (the client's <c>\</c> and <c>|</c> keys) in the old guild system, which
+        ///     has no chat of its own and would otherwise say the line aloud to everyone nearby through ordinary speech. Arguments are the speaker,
+        ///     the text, the message type and the colour the client chose. Return true when the line was handled; false (or no handler) keeps the
+        ///     stock path.
+        /// </summary>
+        public static Func<PlayerMobile, string, MessageType, int, bool> GuildSpeechHandler { get; set; }
+
         [OnEvent(nameof(PlayerLoginEvent))]
         public static void OnLogin(PlayerMobile from)
         {
@@ -2714,6 +2722,10 @@ namespace Server.Mobiles
                     g.GuildChat(this, text);
                     SendToStaffMessage(this, $"[Guild]: {text}");
                 }
+            }
+            else if (type is MessageType.Guild or MessageType.Alliance && GuildSpeechHandler?.Invoke(this, text, type, hue) == true)
+            {
+                // The shard handled the line.
             }
             else
             {
