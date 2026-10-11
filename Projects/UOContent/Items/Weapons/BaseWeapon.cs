@@ -1408,7 +1408,15 @@ public abstract partial class BaseWeapon
             chance = 0.02;
         }
 
-        return attacker.CheckSkill(atkSkill.SkillName, chance);
+        if (attacker.CheckSkill(atkSkill.SkillName, chance))
+        {
+            return true;
+        }
+
+        // A missed swing gets a second roll when the shard lifts the chance. The skill check above is unchanged, so skill gain is too.
+        var lifted = WeaponEvents.GetHitChance(attacker, atkValue, chance);
+
+        return lifted > chance && chance < 1.0 && Utility.RandomDouble() < (lifted - chance) / (1.0 - chance);
     }
 
     /// <summary>
@@ -1546,7 +1554,7 @@ public abstract partial class BaseWeapon
         }
         else
         {
-            var v = (m.Stam + 100) * (int)speed;
+            var v = (WeaponEvents.GetStaminaForSwingDelay(m, m.Stam) + 100) * (int)speed;
 
             if (v <= 0)
             {
@@ -2682,7 +2690,7 @@ public abstract partial class BaseWeapon
          * :  50.0 = unchanged
          * : 100.0 = 50% bonus
          */
-        damage += damage * ((attacker.Skills.Tactics.Value - 50.0) / 100.0);
+        damage += damage * ((WeaponEvents.GetTacticsForDamage(attacker, attacker.Skills.Tactics.Value) - 50.0) / 100.0);
 
         /* Compute strength modifier
          * : 1% bonus for every 5 strength
