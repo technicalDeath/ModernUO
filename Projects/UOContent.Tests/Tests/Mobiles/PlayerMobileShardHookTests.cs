@@ -221,4 +221,116 @@ public class PlayerMobileShardHookTests
                 }
             }
         );
+
+    // A poisoned player reads HitsMax, which needs the mobile's equipment and skills initialised.
+    private static PlayerMobile NewPoisonTarget()
+    {
+        var player = new PlayerMobile(World.NewMobile) { Name = "Tester" };
+        player.DefaultMobileInit();
+
+        return player;
+    }
+
+    private static PoisonImpl TestPoison(int index, int level) => new($"HookTest{index}", index, level, 4, 26, 2.5, 3.5, 3.0, 10, 2);
+
+    [Fact]
+    public void WithoutAPoisonHandlerAPoisonLandsAsBefore()
+    {
+        PlayerMobile.PoisonImmunityHandler = null;
+        var player = NewPoisonTarget();
+
+        try
+        {
+            var result = player.ApplyPoison(null, TestPoison(97, 0));
+
+            Assert.Equal(ApplyPoisonResult.Poisoned, result);
+            Assert.True(player.Poisoned);
+        }
+        finally
+        {
+            player.Poison = null;
+        }
+    }
+
+    [Fact]
+    public void APoisonHandlerIsGivenThePlayerTheSourceAndThePoisonAndMayRefuseIt()
+    {
+        var player = NewPoisonTarget();
+        var source = new Mobile(World.NewMobile);
+        var poison = TestPoison(96, 0);
+        PlayerMobile seenPlayer = null;
+        Mobile seenSource = null;
+        Poison seenPoison = null;
+
+        try
+        {
+            PlayerMobile.PoisonImmunityHandler = (target, from, applied) =>
+            {
+                seenPlayer = target;
+                seenSource = from;
+                seenPoison = applied;
+
+                return true;
+            };
+
+            var result = player.ApplyPoison(source, poison);
+
+            Assert.Equal(ApplyPoisonResult.Immune, result);
+            Assert.False(player.Poisoned);
+            Assert.Same(player, seenPlayer);
+            Assert.Same(source, seenSource);
+            Assert.Same(poison, seenPoison);
+        }
+        finally
+        {
+            PlayerMobile.PoisonImmunityHandler = null;
+            player.Poison = null;
+        }
+    }
+
+    [Fact]
+    public void APoisonHandlerThatAcceptsLeavesThePoisonToLand()
+    {
+        var player = NewPoisonTarget();
+
+        try
+        {
+            PlayerMobile.PoisonImmunityHandler = static (_, _, _) => false;
+
+            Assert.Equal(ApplyPoisonResult.Poisoned, player.ApplyPoison(null, TestPoison(95, 0)));
+            Assert.True(player.Poisoned);
+        }
+        finally
+        {
+            PlayerMobile.PoisonImmunityHandler = null;
+            player.Poison = null;
+        }
+    }
+
+    [Fact]
+    public void APoisonHandlerIsNotAskedWhenAnEqualOrStrongerPoisonIsAlreadyActive()
+    {
+        var player = NewPoisonTarget();
+        var asked = 0;
+
+        try
+        {
+            player.ApplyPoison(null, TestPoison(94, 2));
+
+            PlayerMobile.PoisonImmunityHandler = (_, _, _) =>
+            {
+                asked++;
+
+                return true;
+            };
+
+            Assert.Equal(ApplyPoisonResult.HigherPoisonActive, player.ApplyPoison(null, TestPoison(93, 0)));
+            Assert.Equal(0, asked);
+        }
+        finally
+        {
+            PlayerMobile.PoisonImmunityHandler = null;
+            player.Poison = null;
+        }
+    }
 }

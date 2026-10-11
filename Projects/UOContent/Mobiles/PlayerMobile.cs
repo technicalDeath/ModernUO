@@ -1289,6 +1289,14 @@ namespace Server.Mobiles
         /// </summary>
         public static Func<PlayerMobile, string, MessageType, int, bool> GuildSpeechHandler { get; set; }
 
+        /// <summary>
+        ///     Optional shard-owned: asked once for every poison that is about to land on this player, after the stock checks for a stronger
+        ///     poison already active and for Young immunity. Arguments are the player, whoever applied the poison (null for a trap or a field)
+        ///     and the poison. Return true to refuse it: <see cref="Mobile.OnPoisonImmunity" /> then runs as for any other immunity. The handler
+        ///     may tell the player why. False (or no handler) keeps the stock path.
+        /// </summary>
+        public static Func<PlayerMobile, Mobile, Poison, bool> PoisonImmunityHandler { get; set; }
+
         [OnEvent(nameof(PlayerLoginEvent))]
         public static void OnLogin(PlayerMobile from)
         {
@@ -3836,7 +3844,8 @@ namespace Server.Mobiles
         }
 
         public override bool CheckPoisonImmunity(Mobile from, Poison poison) =>
-            Young && (DuelContext?.Started != true || DuelContext.Finished) || base.CheckPoisonImmunity(from, poison);
+            Young && (DuelContext?.Started != true || DuelContext.Finished) || base.CheckPoisonImmunity(from, poison) ||
+            PoisonImmunityHandler?.Invoke(this, from, poison) == true;
 
         public override void OnPoisonImmunity(Mobile from, Poison poison)
         {
