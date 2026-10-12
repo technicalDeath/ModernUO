@@ -2,6 +2,7 @@ using ModernUO.Serialization;
 using Server.Collections;
 using Server.ContextMenus;
 using Server.Multis;
+using Server.Network;
 using Server.Spells;
 
 namespace Server.Items;
@@ -21,7 +22,33 @@ public partial class SpellScroll : Item, ICommodity
         _spellID = spellID;
     }
 
+    /// <summary>Text a shard adds after the scroll's name when a viewer clicks it once, or null for the stock label. Set once by shard code.</summary>
+    public delegate string SingleClickPostfixDelegate(SpellScroll scroll, Mobile from);
+
+    public static SingleClickPostfixDelegate SingleClickPostfixHandler { get; set; }
+
     public override double DefaultWeight => 1.0;
+
+    public override void OnSingleClick(Mobile from)
+    {
+        var postfix = SingleClickPostfixHandler?.Invoke(this, from);
+        var ns = from.NetState;
+
+        // A scroll with its own name (not a client text number) or one that cannot be seen keeps the stock label.
+        if (string.IsNullOrEmpty(postfix) || Name != null || Deleted || !from.CanSee(this) || ns.CannotSendPackets())
+        {
+            base.OnSingleClick(from);
+            return;
+        }
+
+        if (DisplayLootType)
+        {
+            LabelLootTypeTo(from);
+        }
+
+        var affix = Amount > 1 ? $" : {Amount}{postfix}" : postfix;
+        ns.SendMessageLocalizedAffix(Serial, ItemID, MessageType.Label, 0x3B2, 3, LabelNumber, "", AffixType.Append, affix);
+    }
 
     int ICommodity.DescriptionNumber => LabelNumber;
     bool ICommodity.IsDeedable => Core.ML;

@@ -8,7 +8,15 @@ namespace Server.ContextMenus;
 
 public static class ContextMenuSystem
 {
+    public delegate void ItemContextMenuEntriesDelegate(Item item, Mobile from, ref PooledRefList<ContextMenuEntry> list);
+
     private static readonly Dictionary<Mobile, ContextMenu> _menus = [];
+
+    /// <summary>
+    ///     Optional shard-owned: adds entries to the context menu <c>from</c> opens on any item, after the item's own entries. A handler that
+    ///     adds nothing leaves the menu as it was; null keeps the stock menu.
+    /// </summary>
+    public static ItemContextMenuEntriesDelegate ItemEntriesHandler { get; set; }
 
     public static unsafe void Configure()
     {
@@ -37,6 +45,7 @@ public static class ContextMenuSystem
         else if (target is Item item)
         {
             item.GetContextMenuEntries(from, ref list);
+            ItemEntriesHandler?.Invoke(item, from, ref list);
         }
 
         var entries = list.ToArray();
