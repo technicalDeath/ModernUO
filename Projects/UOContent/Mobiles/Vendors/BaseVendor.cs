@@ -978,7 +978,8 @@ namespace Server.Mobiles
                 if (name != null && list.Count < 250)
                 {
                     list.Add(new BuyItemState(name, cont.Serial, item.Serial, price, item.Amount, item.ItemID, item.Hue));
-                    opls.Enqueue(item.PropertyList);
+
+                    // Goods a player sold are not described to the next buyer: their property list would tell what a UOR player has to identify.
                 }
             }
 

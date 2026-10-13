@@ -1830,6 +1830,9 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
 
     public static HealHandler HealHandler { get; set; }
 
+    /// <summary>Raised after a heal has been applied: the mobile healed, who healed it (null for none) and the hit points really restored (after the region, OnHeal and the maximum), never zero.</summary>
+    public static event Action<Mobile, Mobile, int> HealApplied;
+
     public static CurePoisonHandler CurePoisonHandler { get; set; }
 
     public static ActionCheckHandler ActionCheckHandler { get; set; }
@@ -6260,6 +6263,11 @@ public partial class Mobile : IHued, IComparable<Mobile>, ISpawnable, IObjectPro
         }
 
         Hits += amount;
+
+        if (amount > 0)
+        {
+            HealApplied?.Invoke(this, from, amount);
+        }
 
         if (message && amount > 0)
         {
