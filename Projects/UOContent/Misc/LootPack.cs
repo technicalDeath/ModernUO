@@ -526,6 +526,9 @@ namespace Server
 
     public class LootPackEntry
     {
+        /// <summary>Optional. Says whether a weapon dropped by a monster may take this slayer from the monster's group; a slayer it refuses is simply not given (the weapon stays as it was).</summary>
+        public static Func<SlayerName, bool> WeaponLootSlayerAllowed { get; set; }
+
         private readonly bool m_AtSpawnTime;
 
         public LootPackEntry(bool atSpawnTime, LootPackItem[] items, double chance, string quantity) : this(
@@ -770,7 +773,12 @@ namespace Server
                         else if (from != null && weapon.AccuracyLevel == 0 && weapon.DamageLevel == 0 &&
                             weapon.DurabilityLevel == 0 && weapon.Slayer == SlayerName.None && Utility.Random(100) < 5)
                         {
-                            weapon.Slayer = SlayerGroup.GetLootSlayerType(from.GetType());
+                            var slayer = SlayerGroup.GetLootSlayerType(from.GetType());
+
+                            if (WeaponLootSlayerAllowed?.Invoke(slayer) != false)
+                            {
+                                weapon.Slayer = slayer;
+                            }
                         }
                     }
                     else if (item is BaseArmor armor)

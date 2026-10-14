@@ -2581,14 +2581,24 @@ public partial class Item : IHued, IComparable<Item>, ISpawnable, IObjectPropert
         }
     }
 
+    /// <summary>
+    ///     Optional. When set and it returns true, it has filled the list itself and <see cref="GetProperties" /> is not called,
+    ///     so a shard can decide what a tooltip may say without auditing every override.
+    /// </summary>
+    public static Func<Item, ObjectPropertyList, bool> PropertyListBuilder { get; set; }
+
     private ObjectPropertyList InitializePropertyList(ObjectPropertyList list)
     {
         list.IsBuilding = true;
 
         try
         {
-            GetProperties(list);
-            AppendChildProperties(list);
+            if (PropertyListBuilder?.Invoke(this, list) != true)
+            {
+                GetProperties(list);
+                AppendChildProperties(list);
+            }
+
             list.Terminate();
         }
         finally
@@ -3740,6 +3750,9 @@ public partial class Item : IHued, IComparable<Item>, ISpawnable, IObjectPropert
         return OnDroppedOnto(from, target);
     }
 
+    /// <summary>Raised after a mobile has put an item down on the ground (not into a container). Observers must not change the item.</summary>
+    public static event Action<Mobile, Item> DroppedToWorld;
+
     public virtual bool OnDroppedToWorld(Mobile from, Point3D p)
     {
         if (Nontransferable && from.Player)
@@ -4003,6 +4016,8 @@ public partial class Item : IHued, IComparable<Item>, ISpawnable, IObjectPropert
         MoveToWorld(p, from.Map);
 
         from.SendSound(soundID == -1 ? 0x42 : soundID, GetWorldLocation());
+
+        DroppedToWorld?.Invoke(from, this);
 
         return true;
     }

@@ -129,8 +129,15 @@ public static partial class CharacterCreation
 
     private static CityInfo[] _availableStartingCities;
 
-    public static CityInfo[] GetStartingCities() =>
-        _availableStartingCities ??= ConstructAvailableStartingCities();
+    /// <summary>Optional. Narrows the starting cities offered at character creation. The same list is sent to the client and indexed when the character is made, so the filter must be pure and give the same answer each time.</summary>
+    public static Func<CityInfo[], CityInfo[]> StartingCitiesFilter { get; set; }
+
+    public static CityInfo[] GetStartingCities()
+    {
+        var all = _availableStartingCities ??= ConstructAvailableStartingCities();
+
+        return StartingCitiesFilter?.Invoke(all) ?? all;
+    }
 
     private static CityInfo[] ConstructAvailableStartingCities()
     {
