@@ -54,15 +54,22 @@ namespace Server.Mobiles
             set => DefaultPrice = value;
         }
 
+        /// <summary>
+        /// Shard hook: given an item type and the price on this vendor's list, returns the price to charge. Null leaves stock prices alone.
+        /// </summary>
+        public static Func<Type, int, int> BuyPriceAdjust { get; set; }
+
         public int Price
         {
             get
             {
+                var basePrice = BuyPriceAdjust != null && Type != null ? BuyPriceAdjust(Type, m_Price) : m_Price;
+
                 if (DefaultPrice != 0)
                 {
-                    if (m_Price > 5000000)
+                    if (basePrice > 5000000)
                     {
-                        long price = m_Price;
+                        long price = basePrice;
 
                         price *= DefaultPrice;
                         price += 50;
@@ -76,10 +83,10 @@ namespace Server.Mobiles
                         return (int)price;
                     }
 
-                    return (m_Price * DefaultPrice + 50) / 100;
+                    return (basePrice * DefaultPrice + 50) / 100;
                 }
 
-                return m_Price;
+                return basePrice;
             }
             set => m_Price = value;
         }

@@ -61,9 +61,20 @@ namespace Server.Mobiles
         private readonly Dictionary<Type, int> m_Table = new();
         private Type[] m_Types;
 
+        /// <summary>
+        /// Shard hook: given an item type and the base price this vendor's table pays for it, returns the base price to use (before the quality and
+        /// magic adjustments). Null leaves stock prices alone. Resale prices follow, since they are derived from this price.
+        /// </summary>
+        public static Func<Type, int, int> SellPriceAdjust { get; set; }
+
         public int GetSellPriceFor(Item item)
         {
             m_Table.TryGetValue(item.GetType(), out var price);
+
+            if (SellPriceAdjust != null && price > 0)
+            {
+                price = SellPriceAdjust(item.GetType(), price);
+            }
 
             if (item is BaseArmor armor)
             {
