@@ -5,7 +5,7 @@ using Server.Network;
 
 namespace Server.Engines.Craft.T2A;
 
-public class AlchemyMenu : ItemListMenu
+public class AlchemyMenu : T2ACraftMenu
 {
     private enum Category
     {
@@ -66,7 +66,7 @@ public class AlchemyMenu : ItemListMenu
     };
 
     private AlchemyMenu(Mobile from, BaseTool tool, Category category)
-        : base(GetQuestion(category), BuildFilteredEntries(from, category))
+        : base(GetQuestion(category), BuildFilteredEntries(from, category), DefAlchemy.CraftSystem, GetTypes(category))
     {
         _tool = tool;
         _category = category;

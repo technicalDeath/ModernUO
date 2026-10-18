@@ -20,7 +20,7 @@ namespace Server.Items
         {
             base.OnHit(attacker, defender, damageBonus);
 
-            defender.Stam -= Utility.Random(3, 3); // 3-5 points of stamina loss
+            DrainStamina(attacker, defender, Utility.Random(3, 3)); // 3-5 points of stamina loss
         }
     }
 }

@@ -5,17 +5,21 @@ using Server.Network;
 
 namespace Server.Engines.Craft.T2A;
 
-public class CartographyMenu : ItemListMenu
+public class CartographyMenu : T2ACraftMenu
 {
     private static ItemListEntry[] _cachedEntries;
 
     private readonly BaseTool _tool;
 
     public CartographyMenu(Mobile from, BaseTool tool)
-        : base("What kind of map?", BuildFilteredEntries(from))
+        : base("What kind of map?", BuildFilteredEntries(from), DefCartography.CraftSystem, null)
     {
         _tool = tool;
     }
+
+    // An entry's index is the craft item's own place in the system.
+    public override CraftItem ItemFor(ItemListEntry entry) =>
+        entry.CraftIndex >= 0 && entry.CraftIndex < System.CraftItems.Count ? System.CraftItems[entry.CraftIndex] : null;
 
     public static ItemListEntry[] Main()
     {

@@ -106,6 +106,26 @@ public partial class Corpse : Container, ICarvable
     private static TimeSpan _defaultDecayTime = TimeSpan.FromMinutes(7.0);
     private static TimeSpan _boneDecayTime = TimeSpan.FromMinutes(7.0);
 
+    /// <summary>How long a fresh corpse lasts before it decays (a player's turns to bones, keeping what it holds).</summary>
+    public static TimeSpan DefaultDecayTime => _defaultDecayTime;
+
+    /// <summary>How long bones last before they, and what they hold, are gone.</summary>
+    public static TimeSpan BoneDecayTime => _boneDecayTime;
+
+    /// <summary>Shard hook, null by default: the time a new corpse lasts before it decays, or null for <see cref="DefaultDecayTime"/>.</summary>
+    public static Func<Corpse, TimeSpan?> DecayTimeOverride { get; set; }
+
+    /// <summary>Shard hook, null by default: whether a dead player's corpse records where each item was and what was worn, as AOS does for self-looting.</summary>
+    public static Func<Mobile, bool> RecordsRestore { get; set; }
+
+    /// <summary>Shard hook, null by default: whether the owner's double-click takes everything back and re-equips worn gear, as AOS does.</summary>
+    public static Func<Mobile, Corpse, bool> SelfLootAllowed { get; set; }
+
+    /// <summary>Raised when a corpse's owner opens it (or self-loots it), from within reach.</summary>
+    public static event Action<Mobile, Corpse> OwnerOpened;
+
+    public static TimeSpan InitialDecayTimeFor(Corpse corpse) => DecayTimeOverride?.Invoke(corpse) ?? _defaultDecayTime;
+
     private IDevourer _devourer; // The creature that devoured this corpse
 
     private Dictionary<Item, InstancedItemInfo> _instancedItems;
@@ -322,7 +342,7 @@ public partial class Corpse : Container, ICarvable
             }
         }
 
-        BeginDecay(_defaultDecayTime);
+        BeginDecay(InitialDecayTimeFor(this));
 
         DevourCorpse();
     }
@@ -636,11 +656,13 @@ public partial class Corpse : Container, ICarvable
 
         owner.Corpse = c;
 
+        var restore = owner.Player && (Core.AOS || RecordsRestore?.Invoke(owner) == true);
+
         for (var i = 0; i < initialContent.Count; ++i)
         {
             var item = initialContent[i];
 
-            if (Core.AOS && owner.Player && item.Parent == owner.Backpack)
+            if (restore && item.Parent == owner.Backpack)
             {
                 c.AddItem(item);
             }
@@ -649,7 +671,7 @@ public partial class Corpse : Container, ICarvable
                 c.DropItem(item);
             }
 
-            if (owner.Player && Core.AOS)
+            if (restore)
             {
                 c.SetRestoreInfo(item, item.Location);
             }
@@ -659,7 +681,7 @@ public partial class Corpse : Container, ICarvable
         {
             c.AssignInstancedLoot();
         }
-        else if (Core.AOS && owner is PlayerMobile pm)
+        else if (restore && owner is PlayerMobile pm)
         {
             c.RestoreEquip = pm.EquipSnapshot;
         }
@@ -839,7 +861,7 @@ public partial class Corpse : Container, ICarvable
     {
         base.GetContextMenuEntries(from, ref list);
 
-        if (Core.AOS && _owner == from && from.Alive)
+        if (_owner == from && from.Alive && (Core.AOS || SelfLootAllowed?.Invoke(from, this) == true))
         {
             list.Add(new OpenCorpseEntry());
         }
@@ -918,6 +940,11 @@ public partial class Corpse : Container, ICarvable
         {
             from.SendLocalizedMessage(500446); // That is too far away.
             return;
+        }
+
+        if (from == Owner)
+        {
+            OwnerOpened?.Invoke(from, this);
         }
 
         if (checkSelfLoot && from == Owner && !GetFlag(CorpseFlag.SelfLooted) && Items.Count != 0)
@@ -1075,7 +1102,7 @@ public partial class Corpse : Container, ICarvable
 
     public override void OnDoubleClick(Mobile from)
     {
-        Open(from, Core.AOS);
+        Open(from, Core.AOS || SelfLootAllowed?.Invoke(from, this) == true);
     }
 
     public override bool CheckContentDisplay(Mobile from) => false;

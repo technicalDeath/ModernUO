@@ -38,7 +38,7 @@ public partial class EvilWanderingHealer : BaseHealer
     {
         if (Core.AOS && m.Criminal)
         {
-            Say(501222); // Thou art a criminal.  I shall not resurrect thee.
+            RefuseCriminal(m);
             return false;
         }
 

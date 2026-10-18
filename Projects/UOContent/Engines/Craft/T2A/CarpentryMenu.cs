@@ -5,7 +5,7 @@ using Server.Network;
 
 namespace Server.Engines.Craft.T2A;
 
-public class CarpentryMenu : ItemListMenu
+public class CarpentryMenu : T2ACraftMenu
 {
     private enum Category
     {
@@ -96,7 +96,7 @@ public class CarpentryMenu : ItemListMenu
     };
 
     private CarpentryMenu(Mobile from, BaseTool tool, Category category)
-        : base(GetQuestion(category), BuildFilteredEntries(from, category))
+        : base(GetQuestion(category), BuildFilteredEntries(from, category), DefCarpentry.CraftSystem, GetTypes(category))
     {
         _tool = tool;
         _category = category;

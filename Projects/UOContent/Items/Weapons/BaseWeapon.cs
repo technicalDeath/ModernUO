@@ -1808,6 +1808,20 @@ public abstract partial class BaseWeapon
         };
     }
 
+    /// <summary>Raised after a weapon hit drains the defender's stamina (maces and staves): attacker, defender, the stamina really lost.</summary>
+    public static event Action<Mobile, Mobile, int> HitDrainedStamina;
+
+    protected static void DrainStamina(Mobile attacker, Mobile defender, int amount)
+    {
+        var before = defender.Stam;
+        defender.Stam -= amount;
+
+        if (before > defender.Stam)
+        {
+            HitDrainedStamina?.Invoke(attacker, defender, before - defender.Stam);
+        }
+    }
+
     public virtual void OnHit(Mobile attacker, Mobile defender, double damageBonus = 1.0)
     {
         if (MirrorImage.HasClone(defender) && defender.Skills.Ninjitsu.Value / 150.0 > Utility.RandomDouble())

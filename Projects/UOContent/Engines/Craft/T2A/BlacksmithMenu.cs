@@ -6,7 +6,7 @@ using Server.Targeting;
 
 namespace Server.Engines.Craft.T2A;
 
-public class BlacksmithMenu : ItemListMenu
+public class BlacksmithMenu : T2ACraftMenu
 {
     private enum Category
     {
@@ -110,7 +110,7 @@ public class BlacksmithMenu : ItemListMenu
     };
 
     private BlacksmithMenu(Mobile from, BaseTool tool, Category category)
-        : base(GetQuestion(category), BuildFilteredEntries(from, category))
+        : base(GetQuestion(category), BuildFilteredEntries(from, category), DefBlacksmithy.CraftSystem, GetTypes(category), GetSelectedResourceType(from))
     {
         _tool = tool;
         _category = category;
@@ -241,6 +241,30 @@ public class BlacksmithMenu : ItemListMenu
     public static ItemListEntry[] Platemail() => _platemailEntries ??= BuildStaticEntries(PlatemailTypes, "ingots");
     public static ItemListEntry[] Chainmail() => _chainmailEntries ??= BuildStaticEntries(ChainmailTypes, "ingots");
     public static ItemListEntry[] Ringmail() => _ringmailEntries ??= BuildStaticEntries(RingmailTypes, "ingots");
+
+    /// <summary>
+    /// Raised when the metal chosen for the smithing menu needs more Blacksmithy than the smith has (the smith, the ingot type, the skill it
+    /// needs): every build is filtered by that metal, so the menu offers only Repair and Smelt. A shard can say why.
+    /// </summary>
+    public static event Action<Mobile, Type, double> MetalBeyondSkill;
+
+    public static void CheckMetalSkill(Mobile from)
+    {
+        var context = DefBlacksmithy.CraftSystem.GetContext(from);
+        var res = DefBlacksmithy.CraftSystem.CraftSubRes;
+
+        if (context?.LastResourceIndex is not (>= 0 and var index) || index >= res.Count)
+        {
+            return;
+        }
+
+        var required = res[index].RequiredSkill;
+
+        if (from.Skills[SkillName.Blacksmith].Value < required)
+        {
+            MetalBeyondSkill?.Invoke(from, res[index].ItemType, required);
+        }
+    }
 
     private static Type GetSelectedResourceType(Mobile from)
     {

@@ -89,6 +89,15 @@ public abstract partial class BaseHealer : BaseVendor
 
     public virtual bool CheckResurrect(Mobile m) => true;
 
+    /// <summary>Raised when a healer refuses to resurrect a criminal: the healer and the ghost.</summary>
+    public static event Action<BaseHealer, Mobile> RefusedCriminal;
+
+    protected void RefuseCriminal(Mobile m)
+    {
+        Say(501222); // Thou art a criminal.  I shall not resurrect thee.
+        RefusedCriminal?.Invoke(this, m);
+    }
+
     public virtual void OfferResurrection(Mobile m)
     {
         Direction = GetDirectionTo(m);

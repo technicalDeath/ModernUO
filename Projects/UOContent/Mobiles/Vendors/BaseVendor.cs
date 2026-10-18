@@ -28,6 +28,15 @@ namespace Server.Mobiles
     [SerializationGenerator(2, false)]
     public abstract partial class BaseVendor : BaseCreature, IVendor
     {
+        /// <summary>
+        /// Lets a shard sell a container that holds something as if it were empty (null: only an empty container sells, as stock). Whatever is
+        /// inside goes with it.
+        /// </summary>
+        public static Func<Container, bool> ContainerSellsAsEmpty;
+
+        private static bool HoldsSomething(Item item) =>
+            item is Container container && container.Items.Count != 0 && ContainerSellsAsEmpty?.Invoke(container) != true;
+
         private static readonly ILogger logger = LogFactory.GetLogger(typeof(BaseVendor));
         private const int MaxSell = 500;
 
@@ -457,7 +466,7 @@ namespace Server.Mobiles
             foreach (var resp in list)
             {
                 if (resp.Item.RootParent != seller || resp.Amount <= 0 || !resp.Item.IsStandardLoot() ||
-                    !resp.Item.Movable || resp.Item is Container container && container.Items.Count != 0)
+                    !resp.Item.Movable || HoldsSomething(resp.Item))
                 {
                     continue;
                 }
@@ -486,7 +495,7 @@ namespace Server.Mobiles
             foreach (var resp in list)
             {
                 if (resp.Item.RootParent != seller || resp.Amount <= 0 || !resp.Item.IsStandardLoot() ||
-                    !resp.Item.Movable || resp.Item is Container container && container.Items.Count != 0)
+                    !resp.Item.Movable || HoldsSomething(resp.Item))
                 {
                     continue;
                 }
@@ -875,7 +884,8 @@ namespace Server.Mobiles
 
         public virtual void VendorBuy(Mobile from)
         {
-            if (!IsActiveSeller || !from.CheckAlive())
+            if (!IsActiveSeller || !from.CheckAlive() ||
+                from is PlayerMobile buyer && PlayerMobile.ActionGate?.Invoke(buyer, PlayerAction.Buy, this) == false)
             {
                 return;
             }
@@ -1048,7 +1058,8 @@ namespace Server.Mobiles
 
         public virtual void VendorSell(Mobile from)
         {
-            if (!IsActiveBuyer || !from.CheckAlive())
+            if (!IsActiveBuyer || !from.CheckAlive() ||
+                from is PlayerMobile seller && PlayerMobile.ActionGate?.Invoke(seller, PlayerAction.Sell, this) == false)
             {
                 return;
             }
@@ -1085,7 +1096,7 @@ namespace Server.Mobiles
                         continue;
                     }
 
-                    if (item is Container container && container.Items.Count != 0)
+                    if (HoldsSomething(item))
                     {
                         continue;
                     }

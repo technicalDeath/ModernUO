@@ -9,6 +9,9 @@ public abstract partial class BaseRefreshPotion : BasePotion
     {
     }
 
+    /// <summary>Raised after a refresh potion is drunk: the drinker and the stamina it really gained.</summary>
+    public static event System.Action<Mobile, int> StaminaRestored;
+
     public abstract double Refresh { get; }
 
     public override bool CanDrink(Mobile from)
@@ -29,7 +32,13 @@ public abstract partial class BaseRefreshPotion : BasePotion
 
     public override void Drink(Mobile from)
     {
+        var before = from.Stam;
         from.Stam += Scale(from, (int)(Refresh * from.StamMax));
+
+        if (from.Stam > before)
+        {
+            StaminaRestored?.Invoke(from, from.Stam - before);
+        }
 
         PlayDrinkEffect(from);
     }

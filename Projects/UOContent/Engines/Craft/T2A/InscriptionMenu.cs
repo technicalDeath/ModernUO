@@ -7,7 +7,7 @@ using Server.Network;
 
 namespace Server.Engines.Craft.T2A;
 
-public class InscriptionMenu : ItemListMenu
+public class InscriptionMenu : T2ACraftMenu
 {
     private enum Category
     {
@@ -41,7 +41,7 @@ public class InscriptionMenu : ItemListMenu
     };
 
     private InscriptionMenu(Mobile from, BaseTool tool, Category category)
-        : base(GetQuestion(category), BuildFilteredEntries(from, category))
+        : base(GetQuestion(category), BuildFilteredEntries(from, category), DefInscription.CraftSystem, null)
     {
         _tool = tool;
         _category = category;
@@ -162,6 +162,20 @@ public class InscriptionMenu : ItemListMenu
 
         // Must have the spell in spellbook
         return HasSpellInBook(from, itemDef.ItemType);
+    }
+
+    // A circle's eight scrolls start at (circle - 1) * 8 in the craft list; on the main page only the Runebook entry makes an item.
+    public override CraftItem ItemFor(ItemListEntry entry)
+    {
+        var craftItems = System.CraftItems;
+
+        if (_category == Category.Main)
+        {
+            return (Category)entry.CraftIndex == Category.Runebook ? craftItems.SearchFor(typeof(Runebook)) : null;
+        }
+
+        var index = ((int)_category - 1) * 8 + entry.CraftIndex;
+        return index >= 0 && index < craftItems.Count ? craftItems[index] : null;
     }
 
     private static ItemListEntry[] BuildFilteredEntries(Mobile from, Category category)

@@ -421,6 +421,29 @@ public abstract partial class BaseSpawner : Item, ISpawner
         RemoveSpawns();
     }
 
+    /// <summary>
+    /// Lets a shard refuse a spot for a spawned mobile (the spawner, the mobile still on the internal map, the map, the spot); null allows every
+    /// spot. A refused spot is drawn again up to <see cref="RefusedSpawnRedraws"/> times, then the spawner's own location is used.
+    /// </summary>
+    public static Func<BaseSpawner, Mobile, Map, Point3D, bool> MobileSpawnPositionAllowed;
+
+    public const int RefusedSpawnRedraws = 8;
+
+    private Point3D RedrawSpawnPosition(SpawnerEntry entry, Mobile m, Map map, Func<BaseSpawner, Mobile, Map, Point3D, bool> allowed)
+    {
+        for (var i = 0; i < RefusedSpawnRedraws; i++)
+        {
+            var spot = GetSpawnPosition(entry, m, map);
+
+            if (allowed(this, m, map, spot))
+            {
+                return spot;
+            }
+        }
+
+        return Location;
+    }
+
     public virtual Point3D GetSpawnPosition(ISpawnable spawned, Map map)
     {
         // Abandoned spawners skip all work
@@ -1099,6 +1122,11 @@ public abstract partial class BaseSpawner : Item, ISpawner
                 // var spawnLocation = m is BaseVendor ? Location : GetSpawnPosition(m, map);
 
                 var spawnLocation = GetSpawnPosition(entry, m, map);
+
+                if (MobileSpawnPositionAllowed is { } allowed && !allowed(this, m, map, spawnLocation))
+                {
+                    spawnLocation = RedrawSpawnPosition(entry, m, map, allowed);
+                }
 
                 m.OnBeforeSpawn(spawnLocation, map);
                 m.MoveToWorld(spawnLocation, map);

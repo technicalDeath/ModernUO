@@ -32,6 +32,12 @@ public class GuardedRegion : BaseRegion
 
     public bool GuardsDisabled { get; set; }
 
+    /// <summary>
+    ///     Shard hook, null by default: a mobile it returns true for is a guard target in the region at all times, as a
+    ///     murderer is before AOS, so a guard call kills it whoever struck first.
+    /// </summary>
+    public static Func<Mobile, GuardedRegion, bool> AlwaysGuardTarget { get; set; }
+
     public virtual bool AllowReds => Core.AOS;
 
     public virtual Type DefaultGuardType
@@ -332,7 +338,7 @@ public class GuardedRegion : BaseRegion
         }
     }
 
-    private bool IsAlwaysGuardCandidate(Mobile m) => !AllowReds && m.Murderer;
+    private bool IsAlwaysGuardCandidate(Mobile m) => !AllowReds && m.Murderer || AlwaysGuardTarget?.Invoke(m, this) == true;
 
     public bool IsGuardCandidate(Mobile m)
     {

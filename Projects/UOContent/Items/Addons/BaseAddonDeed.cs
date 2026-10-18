@@ -1,3 +1,4 @@
+using System;
 using ModernUO.Serialization;
 using Server.Multis;
 using Server.Spells;
@@ -11,9 +12,14 @@ namespace Server.Items
     {
         private CraftResource m_Resource;
 
+        /// <summary>
+        /// Shard hook: whether a new pre-AOS addon deed is made newbied (stock). Null keeps stock; a newbied deed can never be sold to a vendor.
+        /// </summary>
+        public static Func<BaseAddonDeed, bool> NewbiedBeforeAos { get; set; }
+
         public BaseAddonDeed() : base(0x14F0)
         {
-            if (!Core.AOS)
+            if (!Core.AOS && NewbiedBeforeAos?.Invoke(this) != false)
             {
                 LootType = LootType.Newbied;
             }

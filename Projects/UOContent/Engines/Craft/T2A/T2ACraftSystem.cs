@@ -27,6 +27,7 @@ public static class T2ACraftSystem
             // Lost Lands flow: resource selection first, then menu
             BlacksmithMenu.ResourceSelection(from, tool, (mob, t) =>
             {
+                BlacksmithMenu.CheckMetalSkill(mob);
                 var menu = new BlacksmithMenu(mob, t);
                 if (menu.Entries.Length == 0)
                 {

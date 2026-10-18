@@ -595,10 +595,12 @@ namespace Server.Spells
                 {
                     // Insufficient mana. You must have at least ~1_MANA_REQUIREMENT~ Mana to use this spell.
                     Caster.LocalOverheadMessage(MessageType.Regular, 0x22, 502625, requiredMana.ToString());
+                    InsufficientMana?.Invoke(this);
                 }
                 else
                 {
                     Caster.LocalOverheadMessage(MessageType.Regular, 0x22, 502625); // Insufficient mana
+                    InsufficientMana?.Invoke(this);
                 }
             }
 
@@ -738,6 +740,9 @@ namespace Server.Spells
 
         public virtual int ComputeKarmaAward() => 0;
 
+        /// <summary>Raised after a cast is refused for want of mana (the caster has had the "Insufficient mana" line).</summary>
+        public static event Action<Spell> InsufficientMana;
+
         public virtual bool CheckSequence()
         {
             var mana = ScaleMana(GetMana());
@@ -759,6 +764,7 @@ namespace Server.Spells
             else if (Caster.Mana < mana)
             {
                 Caster.LocalOverheadMessage(MessageType.Regular, 0x22, 502625); // Insufficient mana for this spell.
+                InsufficientMana?.Invoke(this);
             }
             else if (Core.AOS && (Caster.Frozen || Caster.Paralyzed))
             {

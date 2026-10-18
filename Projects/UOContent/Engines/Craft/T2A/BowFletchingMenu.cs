@@ -5,7 +5,7 @@ using Server.Network;
 
 namespace Server.Engines.Craft.T2A;
 
-public class BowFletchingMenu : ItemListMenu
+public class BowFletchingMenu : T2ACraftMenu
 {
     private static readonly Type[] ItemTypes =
     [
@@ -25,7 +25,7 @@ public class BowFletchingMenu : ItemListMenu
     private readonly BaseTool _tool;
 
     public BowFletchingMenu(Mobile from, BaseTool tool)
-        : base("What would you like to make?", BuildFilteredEntries(from))
+        : base("What would you like to make?", BuildFilteredEntries(from), DefBowFletching.CraftSystem, ItemTypes)
     {
         _tool = tool;
     }

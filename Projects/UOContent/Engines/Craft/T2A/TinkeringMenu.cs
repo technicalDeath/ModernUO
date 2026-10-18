@@ -6,7 +6,7 @@ using Server.Targeting;
 
 namespace Server.Engines.Craft.T2A;
 
-public class TinkeringMenu : ItemListMenu
+public class TinkeringMenu : T2ACraftMenu
 {
     private enum Category
     {
@@ -117,7 +117,7 @@ public class TinkeringMenu : ItemListMenu
     };
 
     private TinkeringMenu(Mobile from, BaseTool tool, Category category, Type selectedResourceType)
-        : base(GetQuestion(category), BuildFilteredEntries(from, category))
+        : base(GetQuestion(category), BuildFilteredEntries(from, category), DefTinkering.CraftSystem, GetTypes(category), selectedResourceType)
     {
         _tool = tool;
         _category = category;

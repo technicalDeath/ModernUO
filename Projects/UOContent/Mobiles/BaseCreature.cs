@@ -2521,6 +2521,14 @@ namespace Server.Mobiles
 
         public virtual bool IsHumanInTown() => Body.IsHuman && Region.IsPartOf<GuardedRegion>();
 
+        /// <summary>
+        ///     Shard hook, null by default: returns false to hide a mobile from this creature. Every AI check that uses CanSee follows it
+        ///     (picking a target, keeping one, casting at one).
+        /// </summary>
+        public static Func<BaseCreature, Mobile, bool> SightFilter { get; set; }
+
+        public override bool CanSee(Mobile m) => base.CanSee(m) && SightFilter?.Invoke(this, m) != false;
+
         public virtual bool CheckGold(Mobile from, Item dropped) => dropped is Gold gold && OnGoldGiven(from, gold);
 
         public virtual bool OnGoldGiven(Mobile from, Gold dropped)

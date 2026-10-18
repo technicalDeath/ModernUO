@@ -40,6 +40,19 @@ public static class StaminaSystem
     // Pub 46 (UOML+)
     public static bool GlobalEtherealMountStamina { get; set; }
 
+    /// <summary>
+    ///     Shard hook, null by default: given the mobile and the stamina a hit would cost it, returns the stamina the hit costs.
+    /// </summary>
+    public static Func<Mobile, int, int> DamageFatigueFilter { get; set; }
+
+    /// <summary>
+    ///     Shard hook, null by default: tells a player who tried to run with no stamina left. Returns false to send the stock message.
+    /// </summary>
+    public static Func<Mobile, bool> TooTiredToRunNotice { get; set; }
+
+    /// <summary>Raised after a hit's fatigue is taken: the mobile and the stamina it really lost.</summary>
+    public static event Action<Mobile, int> DamageFatigueApplied;
+
     public static void Configure()
     {
         CannotRunWhenFatigued = ServerConfiguration.GetOrUpdateSetting("stamina.cannotRunWhenFatigued", !Core.AOS);
@@ -284,7 +297,23 @@ public static class StaminaSystem
 
         if (fatigue > 0)
         {
-            m.Stam -= (int)fatigue;
+            var loss = (int)fatigue;
+
+            if (DamageFatigueFilter != null)
+            {
+                loss = DamageFatigueFilter(m, loss);
+            }
+
+            if (loss > 0)
+            {
+                var before = m.Stam;
+                m.Stam -= loss;
+
+                if (before > m.Stam)
+                {
+                    DamageFatigueApplied?.Invoke(m, before - m.Stam);
+                }
+            }
         }
     }
 
@@ -353,7 +382,11 @@ public static class StaminaSystem
 
         if (CannotRunWhenFatigued && from.Stam <= 0)
         {
-            from.SendLocalizedMessage(500110); // You are too fatigued to move.
+            if (TooTiredToRunNotice?.Invoke(from) != true)
+            {
+                from.SendLocalizedMessage(500110); // You are too fatigued to move.
+            }
+
             e.Blocked = true;
             return;
         }

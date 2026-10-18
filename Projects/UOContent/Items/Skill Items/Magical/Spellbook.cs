@@ -602,6 +602,9 @@ public partial class Spellbook : Item, ICraftable, ISlayer, IAosItem
         return spellID >= 0 && spellID < BookCount && (_content & ((ulong)1 << spellID)) != 0;
     }
 
+    /// <summary>Raised after a spellbook and its contents are sent to a mobile, so a shard can follow with its own data about the spells.</summary>
+    public static event Action<Mobile, Spellbook> Displayed;
+
     public void DisplayTo(Mobile to)
     {
         // The client must know about the spellbook or it will crash!
@@ -627,6 +630,7 @@ public partial class Spellbook : Item, ICraftable, ISlayer, IAosItem
 
         to.NetState.SendDisplaySpellbook(Serial);
         to.NetState.SendSpellbookContent(Serial, ItemID, BookOffset + 1, _content);
+        Displayed?.Invoke(to, this);
     }
 
     public override void GetProperties(IPropertyList list)

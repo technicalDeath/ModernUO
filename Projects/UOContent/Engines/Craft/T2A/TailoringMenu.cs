@@ -6,7 +6,7 @@ using Server.Targeting;
 
 namespace Server.Engines.Craft.T2A;
 
-public class TailoringMenu : ItemListMenu
+public class TailoringMenu : T2ACraftMenu
 {
     private enum Category
     {
@@ -92,7 +92,7 @@ public class TailoringMenu : ItemListMenu
     };
 
     private TailoringMenu(Mobile from, BaseTool tool, Category category, int hue = -1)
-        : base(GetQuestion(category), BuildFilteredEntries(from, category))
+        : base(GetQuestion(category), BuildFilteredEntries(from, category), DefTailoring.CraftSystem, GetTypes(category))
     {
         _tool = tool;
         _category = category;

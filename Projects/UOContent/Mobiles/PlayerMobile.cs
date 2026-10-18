@@ -97,9 +97,57 @@ namespace Server.Mobiles
         DismountRecovery = 1070859 // You cannot mount while recovering from a dismount special maneuver.
     }
 
+    /// <summary>A player's action that <see cref="PlayerMobile.ActionGate"/> may refuse.</summary>
+    public enum PlayerAction
+    {
+        UseItem,
+        UseSkill,
+        CastSpell,
+        Attack,
+        Lift,
+        Buy,
+        Sell
+    }
+
     public partial class PlayerMobile : Mobile, IHonorTarget, IHasSteps
     {
         public static event Action<PlayerMobile> PositionChanged;
+
+        /// <summary>Raised after a dead player is brought back to life, by any means.</summary>
+        public static event Action<PlayerMobile> Resurrected;
+
+        /// <summary>Raised when a player's criminal flag turns on or off: the player and the new value.</summary>
+        public static event Action<PlayerMobile, bool> CriminalChanged;
+
+        /// <summary>When the criminal flag was last set; it lasts <see cref="Mobile.ExpireCriminalDelay"/> from then.</summary>
+        public DateTime CriminalSince { get; private set; }
+
+        [CommandProperty(AccessLevel.Counselor, AccessLevel.GameMaster)]
+        public override bool Criminal
+        {
+            get => base.Criminal;
+            set
+            {
+                var was = base.Criminal;
+                base.Criminal = value;
+
+                if (value)
+                {
+                    CriminalSince = Core.Now;
+                }
+
+                if (was != value)
+                {
+                    CriminalChanged?.Invoke(this, value);
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Shard hook, null by default: may refuse a player's action (and tell the player why). The object is the item, skill, spell,
+        ///     mobile or vendor the action is on.
+        /// </summary>
+        public static Func<PlayerMobile, PlayerAction, object, bool> ActionGate { get; set; }
         private static bool m_NoRecursion;
 
         private static readonly Point3D[] m_TrammelDeathDestinations =
@@ -1841,7 +1889,24 @@ namespace Server.Mobiles
                 return false;
             }
 
-            return DuelContext?.AllowItemUse(this, item) != false && DesignContext.Check(this);
+            return DuelContext?.AllowItemUse(this, item) != false && DesignContext.Check(this) &&
+                   ActionGate?.Invoke(this, PlayerAction.UseItem, item) != false;
+        }
+
+        public override bool CheckSpellCast(ISpell spell) =>
+            base.CheckSpellCast(spell) && ActionGate?.Invoke(this, PlayerAction.CastSpell, spell) != false;
+
+        public override bool OnDragLift(Item item) =>
+            base.OnDragLift(item) && ActionGate?.Invoke(this, PlayerAction.Lift, item) != false;
+
+        public override void Attack(Mobile m)
+        {
+            if (ActionGate?.Invoke(this, PlayerAction.Attack, m) == false)
+            {
+                return;
+            }
+
+            base.Attack(m);
         }
 
         public override bool AllowSkillUse(SkillName skill)
@@ -1865,7 +1930,8 @@ namespace Server.Mobiles
                 }
             }
 
-            return DuelContext?.AllowSkillUse(this, skill) != false && DesignContext.Check(this);
+            return DuelContext?.AllowSkillUse(this, skill) != false && DesignContext.Check(this) &&
+                   ActionGate?.Invoke(this, PlayerAction.UseSkill, skill) != false;
         }
 
         public virtual void RecheckTownProtection()
@@ -2470,6 +2536,8 @@ namespace Server.Mobiles
                 {
                     deathRobe.Delete();
                 }
+
+                Resurrected?.Invoke(this);
             }
         }
 
