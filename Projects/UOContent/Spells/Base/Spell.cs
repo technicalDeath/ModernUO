@@ -447,6 +447,11 @@ namespace Server.Spells
 
         public virtual bool CheckCast() => true;
 
+        /// <summary>
+        /// Shard hook: whether a caster that is not a player speaks the spell's power words (stock: never). Null keeps stock.
+        /// </summary>
+        public static Func<Spell, bool> NonPlayerSaysMantra { get; set; }
+
         public virtual void SayMantra()
         {
             if (Scroll is BaseWand)
@@ -454,7 +459,7 @@ namespace Server.Spells
                 return;
             }
 
-            if (!string.IsNullOrEmpty(Info.Mantra) && Caster.Player)
+            if (!string.IsNullOrEmpty(Info.Mantra) && (Caster.Player || NonPlayerSaysMantra?.Invoke(this) == true))
             {
                 Caster.PublicOverheadMessage(MessageType.Spell, Caster.SpeechHue, true, Info.Mantra, false);
             }

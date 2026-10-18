@@ -124,6 +124,16 @@ public partial class Corpse : Container, ICarvable
     /// <summary>Raised when a corpse's owner opens it (or self-loots it), from within reach.</summary>
     public static event Action<Mobile, Corpse> OwnerOpened;
 
+    /// <summary>
+    /// Shard hook: asked before an act on this corpse that would flag <c>from</c> criminal (the act, and a way to do it again). Return false to stop
+    /// it (the shard can ask the player first and then replay it); null allows every act, as stock.
+    /// </summary>
+    public static Func<Mobile, Corpse, CriminalCorpseAct, Action, bool> CriminalActAllowed { get; set; }
+
+    /// <summary>True when the act is not criminal, or the shard lets it go ahead.</summary>
+    public bool AllowCriminalAct(Mobile from, CriminalCorpseAct act, Action replay = null) =>
+        !IsCriminalAction(from) || CriminalActAllowed?.Invoke(from, this, act, replay) != false;
+
     public static TimeSpan InitialDecayTimeFor(Corpse corpse) => DecayTimeOverride?.Invoke(corpse) ?? _defaultDecayTime;
 
     private IDevourer _devourer; // The creature that devoured this corpse
@@ -449,6 +459,11 @@ public partial class Corpse : Container, ICarvable
         }
 
         var dead = Owner;
+
+        if (!GetFlag(CorpseFlag.Carved) && dead != null && !AllowCriminalAct(from, CriminalCorpseAct.Carve, () => Carve(from, item)))
+        {
+            return;
+        }
 
         if (GetFlag(CorpseFlag.Carved) || dead == null)
         {
@@ -810,11 +825,12 @@ public partial class Corpse : Container, ICarvable
     }
 
     public override bool CheckItemUse(Mobile from, Item item) =>
-        base.CheckItemUse(from, item) && (item == this || CanLoot(from, item));
+        base.CheckItemUse(from, item) && (item == this || CanLoot(from, item) && AllowCriminalAct(from, CriminalCorpseAct.Use));
 
     public override bool CheckLift(Mobile from, Item item, ref LRReason reject) =>
         (LootEligibility?.Invoke(from, this, item) != false) &&
-        base.CheckLift(from, item, ref reject) && CanLoot(from, item);
+        base.CheckLift(from, item, ref reject) && CanLoot(from, item) &&
+        (item == this || AllowCriminalAct(from, CriminalCorpseAct.Loot));
 
     public override void OnItemUsed(Mobile from, Item item)
     {
@@ -1227,4 +1243,13 @@ public partial class Corpse : Container, ICarvable
             }
         }
     }
+}
+
+/// <summary>An act on a corpse that can be criminal (<see cref="Corpse.CriminalActAllowed"/>).</summary>
+public enum CriminalCorpseAct
+{
+    Loot,
+    Use,
+    Carve,
+    Steal
 }

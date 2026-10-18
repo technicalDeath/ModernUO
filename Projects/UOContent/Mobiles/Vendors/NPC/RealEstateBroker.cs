@@ -149,6 +149,11 @@ namespace Server.Mobiles
                 _                             => 0
             };
 
+            if (price > 0 && HouseDeed.ValueAdjust != null)
+            {
+                price = HouseDeed.ValueAdjust(deed, price); // a shard house price (the deed's own value hook)
+            }
+
             return AOS.Scale(price, 80); // refunds 80% of the purchase price
         }
 

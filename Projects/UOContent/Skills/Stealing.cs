@@ -383,6 +383,11 @@ public static class Stealing
 
             if (target is Item item)
             {
+                if (item.RootParent is Corpse corpseRoot && !corpseRoot.AllowCriminalAct(from, CriminalCorpseAct.Steal))
+                {
+                    return;
+                }
+
                 targetedItem = item;
                 root = item.RootParent;
                 stolen = TryStealItem(item, ref caught);

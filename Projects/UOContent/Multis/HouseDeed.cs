@@ -1,3 +1,4 @@
+using System;
 using ModernUO.Serialization;
 using Server.Gumps;
 using Server.Mobiles;
@@ -52,7 +53,15 @@ public abstract partial class HouseDeed : Item
 
     public abstract BaseHouse GetHouse(Mobile owner);
 
-    public int NormalPlacementValue => this switch
+    /// <summary>
+    /// Shard hook: adjusts a deed's house value (deed, stock value) -> value. The placement value and the Real Estate Broker's buy-back both use it,
+    /// so a shard that changes a house's price keeps them consistent with what the deed costs.
+    /// </summary>
+    public static Func<HouseDeed, int, int> ValueAdjust { get; set; }
+
+    public int NormalPlacementValue => ValueAdjust?.Invoke(this, StockPlacementValue) ?? StockPlacementValue;
+
+    public int StockPlacementValue => this switch
     {
         StonePlasterHouseDeed or FieldStoneHouseDeed or SmallBrickHouseDeed or
             WoodHouseDeed or WoodPlasterHouseDeed or ThatchedRoofCottageDeed => 43800,
