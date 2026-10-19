@@ -124,6 +124,15 @@ public partial class Corpse : Container, ICarvable
     /// <summary>Raised when a corpse's owner opens it (or self-loots it), from within reach.</summary>
     public static event Action<Mobile, Corpse> OwnerOpened;
 
+    /// <summary>Raised when anyone within reach opens a corpse (after the range check), owner or not.</summary>
+    public static event Action<Mobile, Corpse> Opened;
+
+    /// <summary>How long until the current decay step (turning to bones, or being deleted), or zero when no decay is running.</summary>
+    public TimeSpan DecayLeft => _decayTimer is { Running: true } t ? t.Next - Core.Now : TimeSpan.Zero;
+
+    /// <summary>True when the next decay step deletes the corpse and what is in it (it is bones already, or it never turns to bones).</summary>
+    public bool DecaysAway => GetFlag(CorpseFlag.NoBones);
+
     /// <summary>
     /// Shard hook: asked before an act on this corpse that would flag <c>from</c> criminal (the act, and a way to do it again). Return false to stop
     /// it (the shard can ask the player first and then replay it); null allows every act, as stock.
@@ -957,6 +966,8 @@ public partial class Corpse : Container, ICarvable
             from.SendLocalizedMessage(500446); // That is too far away.
             return;
         }
+
+        Opened?.Invoke(from, this);
 
         if (from == Owner)
         {
