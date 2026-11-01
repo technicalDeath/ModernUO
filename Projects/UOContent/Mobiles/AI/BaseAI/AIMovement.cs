@@ -360,6 +360,17 @@ public abstract partial class BaseAI
     /// best-distance stall counter idles the creature if an in-range goal is genuinely
     /// unreachable, without ever abandoning a real chase or detour.
     /// </summary>
+    /// <summary>
+    ///     Shard hook, null by default: true lets a pet closing on its master take the greedy step while it can see the master, even with a
+    ///     planned path, when the master has moved since that path was planned. A path keeps leading to where the master stood and is re-planned
+    ///     only every <c>PathFollower.RepathDelay</c>, so a pet behind a moving master took about one step in two seconds' worth of thinks.
+    /// </summary>
+    public static Func<BaseCreature, bool> GreedyFollowFilter { get; set; }
+
+    private bool PathIsStaleForMaster(Mobile target) =>
+        Path != null && IsPacingToMaster() && target == Mobile.ControlMaster && Path.LastGoalLocation != target.Location &&
+        GreedyFollowFilter?.Invoke(Mobile) == true;
+
     protected bool ApproachTarget(Mobile target, int range)
     {
         if (Mobile.Deleted || Mobile.DisallowAllMoves || target?.Deleted != false)
@@ -399,7 +410,7 @@ public abstract partial class BaseAI
         // concave obstacle); treating it as progress would discard a PathFollower that is
         // the only way to navigate. A blocked step or a non-Success result falls through to
         // the planner immediately.
-        if (Path == null && Mobile.InLOS(target))
+        if ((Path == null || PathIsStaleForMaster(target)) && Mobile.InLOS(target))
         {
             var distBefore = Mobile.GetDistanceToSqrt(target);
             var res = DoMoveImpl(Mobile.GetDirectionTo(target), true);

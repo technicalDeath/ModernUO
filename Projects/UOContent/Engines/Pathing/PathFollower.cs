@@ -24,6 +24,9 @@ public class PathFollower
 
     public IPoint3D Goal { get; }
 
+    /// <summary>Where the goal stood when the current path was planned.</summary>
+    public Point3D LastGoalLocation => m_LastGoalLoc;
+
     public static void Configure()
     {
         Enabled = ServerConfiguration.GetOrUpdateSetting("pathfinding.enable", true);
