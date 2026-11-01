@@ -111,4 +111,58 @@ public class ContextMenuShardHookTests
             viewer.Delete();
         }
     }
+
+    [Fact]
+    public void AMobileHandlerIsGivenTheMobileAndTheViewerAndItsEntryIsAddedAfterTheMobilesOwn()
+    {
+        var viewer = NewViewer();
+        var other = NewViewer();
+        Mobile seenMobile = null;
+        Mobile seenViewer = null;
+
+        try
+        {
+            ContextMenuSystem.MobileEntriesHandler = (Mobile target, Mobile from, ref PooledRefList<ContextMenuEntry> list) =>
+            {
+                seenMobile = target;
+                seenViewer = from;
+                list.Add(new ContextMenuEntry(3050002));
+            };
+
+            var entries = ContextMenuSystem.CreateContextMenu(viewer, other).Entries;
+
+            Assert.Same(other, seenMobile);
+            Assert.Same(viewer, seenViewer);
+            Assert.Equal(3050002, entries[^1].Number);
+        }
+        finally
+        {
+            ContextMenuSystem.MobileEntriesHandler = null;
+            other.Delete();
+            viewer.Delete();
+        }
+    }
+
+    [Fact]
+    public void AnItemMenuNeverAsksTheMobileHandler()
+    {
+        var viewer = NewViewer();
+        var item = new Bottle();
+        var asked = false;
+
+        try
+        {
+            ContextMenuSystem.MobileEntriesHandler = (Mobile _, Mobile _, ref PooledRefList<ContextMenuEntry> _) => asked = true;
+
+            ContextMenuSystem.CreateContextMenu(viewer, item);
+
+            Assert.False(asked);
+        }
+        finally
+        {
+            ContextMenuSystem.MobileEntriesHandler = null;
+            item.Delete();
+            viewer.Delete();
+        }
+    }
 }

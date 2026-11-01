@@ -10,6 +10,8 @@ public static class ContextMenuSystem
 {
     public delegate void ItemContextMenuEntriesDelegate(Item item, Mobile from, ref PooledRefList<ContextMenuEntry> list);
 
+    public delegate void MobileContextMenuEntriesDelegate(Mobile mobile, Mobile from, ref PooledRefList<ContextMenuEntry> list);
+
     private static readonly Dictionary<Mobile, ContextMenu> _menus = [];
 
     /// <summary>
@@ -17,6 +19,12 @@ public static class ContextMenuSystem
     ///     adds nothing leaves the menu as it was; null keeps the stock menu.
     /// </summary>
     public static ItemContextMenuEntriesDelegate ItemEntriesHandler { get; set; }
+
+    /// <summary>
+    ///     Optional shard-owned: adds entries to (or adjusts the entries of) the context menu <c>from</c> opens on any mobile, after the mobile's own
+    ///     entries. A handler that adds nothing leaves the menu as it was; null keeps the stock menu.
+    /// </summary>
+    public static MobileContextMenuEntriesDelegate MobileEntriesHandler { get; set; }
 
     public static unsafe void Configure()
     {
@@ -41,6 +49,7 @@ public static class ContextMenuSystem
             }
 
             mobile.GetContextMenuEntries(from, ref list);
+            MobileEntriesHandler?.Invoke(mobile, from, ref list);
         }
         else if (target is Item item)
         {
