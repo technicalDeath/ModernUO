@@ -908,7 +908,7 @@ public abstract partial class BaseAI
 
         DebugSay("Acquiring new target...", 0);
 
-        var acquired = AcquireNewFocusMob(Mobile.Map, iRange, acqType, bPlayerOnly, bFacFriend, bFacFoe);
+        var acquired = AcquireNewFocusMob(Mobile.Map, Mobile.AcquireRange(iRange), acqType, bPlayerOnly, bFacFriend, bFacFoe);
 
         // Reaction time is the approach path (BaseCreature.ScheduleAcquireOnApproach),
         // not this poll — every scan honors the full delay.

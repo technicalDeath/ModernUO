@@ -35,6 +35,9 @@ public partial class Kindling : Item
     /// <summary>Decides whether a mobile lights a fire. Null keeps the stock Camping skill roll.</summary>
     public static Func<Mobile, bool> IgniteCheck { get; set; }
 
+    /// <summary>Raised when a mobile uses the last Kindling of a stack, lighting or feeding a fire.</summary>
+    public static event Action<Mobile> StackUsedUp;
+
     public override double DefaultWeight => 5.0;
 
     public override void OnDoubleClick(Mobile from)
@@ -107,7 +110,11 @@ public partial class Kindling : Item
     {
         Consume();
 
-        if (!Deleted && Parent == null)
+        if (Deleted)
+        {
+            StackUsedUp?.Invoke(from);
+        }
+        else if (Parent == null)
         {
             from.PlaceInBackpack(this);
         }

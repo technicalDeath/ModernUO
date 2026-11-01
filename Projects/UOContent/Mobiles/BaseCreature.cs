@@ -1104,6 +1104,12 @@ namespace Server.Mobiles
         [CommandProperty(AccessLevel.GameMaster)]
         public virtual double FollowMoveSpeed => Core.AOS ? 0.1 : 0;
 
+        /// <summary>
+        ///     Shard hook, null by default: the follow pace to use, given this creature's <see cref="FollowMoveSpeed" />. Same meaning: seconds per
+        ///     step while closing on the master under a standing order, a cap and never an override, 0 for none.
+        /// </summary>
+        public static Func<BaseCreature, double, double> FollowMoveSpeedFilter { get; set; }
+
         [CommandProperty(AccessLevel.GameMaster)]
         public IPoint2D TargetLocation
         {
@@ -1142,7 +1148,7 @@ namespace Server.Mobiles
                     speed = _currentSpeed;
                 }
 
-                var followSpeed = FollowMoveSpeed;
+                var followSpeed = FollowMoveSpeedFilter?.Invoke(this, FollowMoveSpeed) ?? FollowMoveSpeed;
 
                 return followSpeed > 0 && AIObject?.IsPacingToMaster() == true
                     ? Math.Min(followSpeed, speed)
@@ -1355,7 +1361,7 @@ namespace Server.Mobiles
             Combatant == null &&
             !Controlled && !Summoned && !BardPacified &&
             FightMode != FightMode.None && FightMode != FightMode.Aggressor &&
-            InRange(m.Location, AcquireOnApproachRange) &&
+            InRange(m.Location, AcquireRange(AcquireOnApproachRange)) &&
             IsEnemy(m) && CanBeHarmful(m, false);
 
         public virtual bool ReacquireOnMovement => false;
@@ -2528,6 +2534,14 @@ namespace Server.Mobiles
         public static Func<BaseCreature, Mobile, bool> SightFilter { get; set; }
 
         public override bool CanSee(Mobile m) => base.CanSee(m) && SightFilter?.Invoke(this, m) != false;
+
+        /// <summary>
+        ///     Shard hook, null by default: the range this creature picks a new target within, given the stock range (the periodic scan's
+        ///     <see cref="RangePerception" /> and the <see cref="AcquireOnApproachRange" /> reaction). Chasing, leashing and fighting back are not affected.
+        /// </summary>
+        public static Func<BaseCreature, int, int> AcquireRangeFilter { get; set; }
+
+        public int AcquireRange(int range) => AcquireRangeFilter?.Invoke(this, range) ?? range;
 
         public virtual bool CheckGold(Mobile from, Item dropped) => dropped is Gold gold && OnGoldGiven(from, gold);
 
