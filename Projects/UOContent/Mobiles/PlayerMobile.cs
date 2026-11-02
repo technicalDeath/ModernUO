@@ -284,7 +284,15 @@ namespace Server.Mobiles
 
         public BlockMountType MountBlockReason => _mountBlock?.MountBlockReason ?? BlockMountType.None;
 
-        public override int MaxWeight => (Core.ML && Race == Race.Human ? 100 : 40) + (int)(3.5 * Str);
+        /// <summary>
+        ///     Shard hook, null by default: adjusts a player's carry limit (player, stock limit) -> limit. Everything that weighs a
+        ///     player's load reads <see cref="MaxWeight" />, so the overload penalty, the status bar and the overloaded message all follow it.
+        /// </summary>
+        public static Func<PlayerMobile, int, int> MaxWeightAdjust { get; set; }
+
+        public int StockMaxWeight => (Core.ML && Race == Race.Human ? 100 : 40) + (int)(3.5 * Str);
+
+        public override int MaxWeight => MaxWeightAdjust?.Invoke(this, StockMaxWeight) ?? StockMaxWeight;
 
         public override double ArmorRating
         {

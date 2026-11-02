@@ -1,3 +1,4 @@
+using System;
 using ModernUO.Serialization;
 using Server.Collections;
 using Server.ContextMenus;
@@ -249,13 +250,20 @@ public partial class Backpack : BaseContainer, IDyable
 
     public override double DefaultWeight => 3.0;
 
+    /// <summary>
+    ///     Shard hook, null by default: adjusts the most a player's own worn backpack holds (player, stock most) -> most. Other
+    ///     backpacks, bags in the pack and pack animals' packs keep their stock limits.
+    /// </summary>
+    public static Func<Mobile, int, int> PlayerMaxWeightAdjust { get; set; }
+
     public override int DefaultMaxWeight
     {
         get
         {
-            if (Core.ML && Parent is Mobile m && m.Player && m.Backpack == this)
+            if (Parent is Mobile m && m.Player && m.Backpack == this)
             {
-                return 550;
+                var stock = Core.ML ? 550 : base.DefaultMaxWeight;
+                return PlayerMaxWeightAdjust?.Invoke(m, stock) ?? stock;
             }
 
             return base.DefaultMaxWeight;
