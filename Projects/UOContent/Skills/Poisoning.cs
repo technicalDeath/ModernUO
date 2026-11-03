@@ -8,6 +8,12 @@ namespace Server.SkillHandlers
 {
     public static class Poisoning
     {
+        /// <summary>How long applying a poison takes before it succeeds or fails.</summary>
+        public static readonly TimeSpan PoisonDelay = TimeSpan.FromSeconds(2.0);
+
+        /// <summary>Raised as a poison starts going onto a weapon or food (the potion is used up), with the item poisoned.</summary>
+        public static event Action<Mobile, Item> PoisonStarted;
+
         public static void Initialize()
         {
             SkillInfo.Table[(int)SkillName.Poisoning].Callback = OnUse;
@@ -76,6 +82,7 @@ namespace Server.SkillHandlers
                     if (startTimer)
                     {
                         new InternalTimer(from, (Item)targeted, m_Potion).Start();
+                        PoisonStarted?.Invoke(from, (Item)targeted);
 
                         from.PlaySound(0x4F);
 
@@ -110,7 +117,7 @@ namespace Server.SkillHandlers
                     private readonly Poison m_Poison;
                     private readonly Item m_Target;
 
-                    public InternalTimer(Mobile from, Item target, BasePoisonPotion potion) : base(TimeSpan.FromSeconds(2.0))
+                    public InternalTimer(Mobile from, Item target, BasePoisonPotion potion) : base(PoisonDelay)
                     {
                         m_From = from;
                         m_Target = target;

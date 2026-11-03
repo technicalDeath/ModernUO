@@ -9,6 +9,9 @@ namespace Server.Items;
 /// </summary>
 public static class SpinningWheelEvents
 {
+    /// <summary>How long every spinning wheel takes to spin one material.</summary>
+    public static readonly TimeSpan SpinDelay = TimeSpan.FromSeconds(3.0);
+
     public static event Action<Item, ISpinningWheel, Mobile> SpinStarted;
 
     public static event Action<Item, ISpinningWheel, Mobile> Spun;

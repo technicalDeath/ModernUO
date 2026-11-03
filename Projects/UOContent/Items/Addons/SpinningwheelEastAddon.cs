@@ -82,7 +82,7 @@ namespace Server.Items
             private readonly SpinningWheelEastAddon m_Wheel;
 
             public SpinTimer(SpinningWheelEastAddon wheel, SpinCallback callback, Mobile from, int hue) : base(
-                TimeSpan.FromSeconds(3.0)
+                SpinningWheelEvents.SpinDelay
             )
             {
                 m_Wheel = wheel;

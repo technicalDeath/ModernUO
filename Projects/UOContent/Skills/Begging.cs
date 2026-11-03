@@ -7,6 +7,12 @@ namespace Server.SkillHandlers
 {
     public static class Begging
     {
+        /// <summary>How long a bow to an NPC takes before they give or refuse.</summary>
+        public static readonly TimeSpan BegDelay = TimeSpan.FromSeconds(2.0);
+
+        /// <summary>Raised as a player bows to an NPC to beg, with the NPC.</summary>
+        public static event Action<Mobile, Mobile> BegStarted;
+
         public static void Initialize()
         {
             SkillInfo.Table[(int)SkillName.Begging].Callback = OnUse;
@@ -76,6 +82,7 @@ namespace Server.SkillHandlers
                     from.Animate(32, 5, 1, true, false, 0); // Bow
 
                     new InternalTimer(from, targ).Start();
+                    BegStarted?.Invoke(from, targ);
                     return;
                 }
 
@@ -87,7 +94,7 @@ namespace Server.SkillHandlers
                 private readonly Mobile _from;
                 private readonly Mobile _target;
 
-                public InternalTimer(Mobile from, Mobile target) : base(TimeSpan.FromSeconds(2.0))
+                public InternalTimer(Mobile from, Mobile target) : base(BegDelay)
                 {
                     _from = from;
                     _target = target;

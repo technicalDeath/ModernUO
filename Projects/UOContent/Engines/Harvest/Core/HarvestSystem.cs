@@ -21,6 +21,36 @@ namespace Server.Engines.Harvest
         /// </summary>
         public static event Action<HarvestSystem, Mobile, Item, object, HarvestStage> StageChanged;
 
+        /// <summary>
+        ///     Raised as a timed attempt starts, with how long it lasts until its result: one swing interval fewer than its swings,
+        ///     plus the last swing's sound delay.
+        /// </summary>
+        public static event Action<HarvestSystem, Mobile, HarvestDefinition, TimeSpan> AttemptTimed;
+
+        /// <summary>Raised when a timed attempt is cut short at a swing, the last one included (out of range, the resource gone, the tool unusable).</summary>
+        public static event Action<HarvestSystem, Mobile> AttemptAborted;
+
+        /// <summary>
+        /// Raised once a harvested item (or a bonus item) has gone into the harvester's pack or at their feet. What was gained is read before the
+        /// item is given, because a pile merges into the one already carried and is deleted. A full pack does not raise it.
+        /// </summary>
+        public static event Action<HarvestSystem, Mobile, HarvestedItem> ResourceGained;
+
+        public static TimeSpan AttemptDuration(HarvestDefinition def, int count) =>
+            def.EffectDelay * Math.Max(count - 1, 0) + def.EffectSoundDelay;
+
+        internal static void RaiseAttemptAborted(HarvestSystem system, Mobile from) => AttemptAborted?.Invoke(system, from);
+
+        // Give can say yes for an item that went elsewhere (a fished-up treasure map is put on a sea serpent), so only an item now merged into a
+        // pile (deleted), carried, or at the harvester's feet counts as gained
+        private void RaiseResourceGained(Mobile from, Item item, HarvestedItem gained)
+        {
+            if (item.Deleted || item.RootParent == from || item.Parent == null)
+            {
+                ResourceGained?.Invoke(this, from, gained);
+            }
+        }
+
         public HarvestDefinition[] Definitions { get; init; }
 
         public virtual bool CheckTool(Mobile from, Item tool)
@@ -212,10 +242,12 @@ namespace Server.Engines.Harvest
                         }
 
                         bank.Consume(item.Amount, from);
+                        var gained = new HarvestedItem(item);
 
                         if (Give(from, item, def.PlaceAtFeetIfFull))
                         {
                             stage = HarvestStage.Harvested;
+                            RaiseResourceGained(from, item, gained);
                             SendSuccessTo(from, item, resource);
                         }
                         else
@@ -230,10 +262,12 @@ namespace Server.Engines.Harvest
                         if (bonus?.Type != null && skillBase >= bonus.ReqSkill)
                         {
                             var bonusItem = Construct(bonus.Type, from);
+                            var bonusGained = bonusItem == null ? default : new HarvestedItem(bonusItem);
 
                             // Bonuses always allow placing at feet, even if pack is full irregrdless of def
                             if (Give(from, bonusItem, true))
                             {
+                                RaiseResourceGained(from, bonusItem, bonusGained);
                                 bonus.SendSuccessTo(from);
                             }
                             else
@@ -379,12 +413,14 @@ namespace Server.Engines.Harvest
             if (!CheckHarvest(from, tool))
             {
                 from.EndAction(locked);
+                RaiseAttemptAborted(this, from);
                 return false;
             }
 
             if (!GetHarvestDetails(from, tool, toHarvest, out var tileID, out var map, out var loc, out var isLand))
             {
                 from.EndAction(locked);
+                RaiseAttemptAborted(this, from);
                 OnBadHarvestTarget(from, tool, toHarvest);
                 return false;
             }
@@ -392,6 +428,7 @@ namespace Server.Engines.Harvest
             if (!def.Validate(tileID, isLand))
             {
                 from.EndAction(locked);
+                RaiseAttemptAborted(this, from);
                 OnBadHarvestTarget(from, tool, toHarvest);
                 return false;
             }
@@ -399,18 +436,21 @@ namespace Server.Engines.Harvest
             if (!CheckRange(from, tool, def, map, loc, true))
             {
                 from.EndAction(locked);
+                RaiseAttemptAborted(this, from);
                 return false;
             }
 
             if (!CheckResources(from, tool, def, map, loc, true))
             {
                 from.EndAction(locked);
+                RaiseAttemptAborted(this, from);
                 return false;
             }
 
             if (!CheckHarvest(from, tool, def, toHarvest))
             {
                 from.EndAction(locked);
+                RaiseAttemptAborted(this, from);
                 return false;
             }
 
@@ -498,9 +538,11 @@ namespace Server.Engines.Harvest
                 return;
             }
 
-            new HarvestTimer(from, tool, this, def, toHarvest, toLock).Start();
+            var timer = new HarvestTimer(from, tool, this, def, toHarvest, toLock);
+            timer.Start();
             OnHarvestStarted(from, tool, def, toHarvest);
             StageChanged?.Invoke(this, from, tool, toHarvest, HarvestStage.Started);
+            AttemptTimed?.Invoke(this, from, def, AttemptDuration(def, timer.Count));
         }
 
         public virtual bool GetHarvestDetails(
@@ -538,6 +580,14 @@ namespace Server.Engines.Harvest
             }
 
             return map != null && map != Map.Internal;
+        }
+    }
+
+    /// <summary>What a harvest gave, read before the item was given (it may have merged into a pile and been deleted since).</summary>
+    public readonly record struct HarvestedItem(Type Type, int ItemId, int Hue, int Amount)
+    {
+        public HarvestedItem(Item item) : this(item.GetType(), item.ItemID, item.Hue, item.Amount)
+        {
         }
     }
 }

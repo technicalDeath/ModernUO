@@ -27,9 +27,15 @@ namespace Server.Engines.Harvest
             m_Count = def.EffectCounts.RandomElement();
         }
 
+        /// <summary>How many swings this attempt makes; the result follows the last one's sound.</summary>
+        public int Count => m_Count;
+
         protected override void OnTick()
         {
-            if (!m_System.OnHarvesting(m_From, m_Tool, m_Definition, m_ToHarvest, m_Locked, ++m_Index == m_Count))
+            var last = ++m_Index == m_Count;
+
+            // the last swing returns false too: it hands the result to its sound timer (a failed check raises AttemptAborted itself)
+            if (!m_System.OnHarvesting(m_From, m_Tool, m_Definition, m_ToHarvest, m_Locked, last))
             {
                 Stop();
             }

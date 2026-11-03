@@ -1010,6 +1010,7 @@ namespace Server.Engines.Craft
             var iRandom = Utility.Random(iMax);
             iRandom += iMin + 1;
             new InternalTimer(from, craftSystem, this, typeRes, tool, iRandom).Start();
+            CraftEvents.InvokeCraftStarted(from, craftSystem, this, iRandom);
         }
 
         /// <summary>
@@ -1095,6 +1096,7 @@ namespace Server.Engines.Craft
             var iRandom = Utility.Random(iMax);
             iRandom += iMin + 1;
             new InternalTimer(from, craftSystem, this, typeRes, tool, iRandom, resHue).Start();
+            CraftEvents.InvokeCraftStarted(from, craftSystem, this, iRandom);
         }
 
         /// <summary>
@@ -1475,6 +1477,7 @@ namespace Server.Engines.Craft
                         }
                     }
 
+                    CraftEvents.InvokeCrafted(from, craftSystem, item);
                     from.AddToBackpack(item);
 
                     if (from.AccessLevel > AccessLevel.Player)
@@ -1757,6 +1760,7 @@ namespace Server.Engines.Craft
                         item.Hue = resHue;
                     }
 
+                    CraftEvents.InvokeCrafted(from, craftSystem, item);
                     from.AddToBackpack(item);
 
                     num = craftSystem.PlayEndingEffect(from, false, true, toolBroken, endquality, false, this);
@@ -1868,6 +1872,7 @@ namespace Server.Engines.Craft
                 {
                     m_From.EndAction<CraftSystem>();
                     Stop();
+                    CraftEvents.InvokeCraftCancelled(m_From, m_CraftSystem);
                     return;
                 }
 

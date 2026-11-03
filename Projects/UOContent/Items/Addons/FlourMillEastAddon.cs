@@ -70,8 +70,9 @@ namespace Server.Items
                 return;
             }
 
-            Timer.StartTimer(TimeSpan.FromSeconds(5.0), () => FinishWorking_Callback(from));
+            Timer.StartTimer(FlourMillEvents.GrindDelay, () => FinishWorking_Callback(from));
             IsWorking = true;
+            FlourMillEvents.InvokeGrindStarted(from, this);
             UpdateStage();
         }
 
@@ -85,6 +86,7 @@ namespace Server.Items
 
                 if (from.PlaceInBackpack(flour))
                 {
+                    FlourMillEvents.InvokeFlourGiven(from, flour);
                     _curFlour = 0;
                 }
                 else

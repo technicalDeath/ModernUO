@@ -43,6 +43,15 @@ public partial class Campfire : Item
 {
     public const int SecureRange = 7;
 
+    /// <summary>How long a player stays within <see cref="SecureRange" /> of a burning fire before the camp is secure.</summary>
+    public static readonly TimeSpan SecureDelay = TimeSpan.FromSeconds(30.0);
+
+    /// <summary>Raised as a player near a burning fire starts securing a camp there.</summary>
+    public static event Action<CampfireEntry> EntryStarted;
+
+    /// <summary>Raised as a player's camp entry ends (moving off, the fire burning down, logging out), secured or not.</summary>
+    public static event Action<CampfireEntry> EntryEnded;
+
     private static readonly Dictionary<Mobile, CampfireEntry> _table = [];
 
     private static readonly HashSet<Campfire> _active = [];
@@ -159,6 +168,7 @@ public partial class Campfire : Item
     {
         _table.Remove(entry.Player);
         entry.Fire._entries.Remove(entry);
+        EntryEnded?.Invoke(entry);
     }
 
     private void OnTick()
@@ -187,7 +197,7 @@ public partial class Campfire : Item
             {
                 RemoveEntry(entry);
             }
-            else if (!entry.Safe && now - entry.Start >= TimeSpan.FromSeconds(30.0))
+            else if (!entry.Safe && now - entry.Start >= SecureDelay)
             {
                 entry.Safe = true;
                 entry.Player.SendLocalizedMessage(500621); // The camp is now secure.
@@ -204,6 +214,7 @@ public partial class Campfire : Item
                 _entries.Add(entry);
 
                 pm.SendLocalizedMessage(500620); // You feel it would take a few moments to secure your camp.
+                EntryStarted?.Invoke(entry);
             }
         }
     }
@@ -220,7 +231,14 @@ public partial class Campfire : Item
             _table.Remove(entry.Player);
         }
 
+        var ended = _entries.ToArray();
         _entries.Clear();
+
+        foreach (var entry in ended)
+        {
+            EntryEnded?.Invoke(entry);
+        }
+
         _entries.TrimExcess();
     }
 
@@ -257,4 +275,7 @@ public class CampfireEntry
         get => Valid && _safe;
         set => _safe = value;
     }
+
+    /// <summary>Whether the camp was secured, read even after the entry is no longer valid.</summary>
+    public bool Secured => _safe;
 }

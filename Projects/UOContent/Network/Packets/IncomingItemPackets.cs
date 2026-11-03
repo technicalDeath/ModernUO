@@ -13,6 +13,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  *************************************************************************/
 
+using System;
 using System.Buffers;
 using System.IO;
 using Server.Collections;
@@ -41,6 +42,11 @@ public static class IncomingItemPackets
         state.Mobile.Lift(item, amount, out _, out _);
     }
 
+    /// <summary>
+    ///     Shard hook: equips an item dragged onto a paperdoll (from, to, item) in place of <see cref="Mobile.EquipItem" />; false bounces it back.
+    /// </summary>
+    public static Func<Mobile, Mobile, Item, bool> EquipRequestHandler { get; set; }
+
     public static void EquipReq(NetState state, SpanReader reader)
     {
         var from = state.Mobile;
@@ -64,7 +70,7 @@ public static class IncomingItemPackets
         reader.Seek(5, SeekOrigin.Current);
         var to = World.FindMobile((Serial)reader.ReadUInt32()) ?? from;
 
-        if (!to.AllowEquipFrom(from) || !to.EquipItem(item))
+        if (!to.AllowEquipFrom(from) || !(EquipRequestHandler?.Invoke(from, to, item) ?? to.EquipItem(item)))
         {
             item.Bounce(from);
         }

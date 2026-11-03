@@ -616,6 +616,7 @@ public partial class TreasureMap : MapItem
                         else if (from.BeginAction<TreasureMap>())
                         {
                             new DigTimer(from, m_Map, new Point3D(x, y, z), map).Start();
+                            DigStarted?.Invoke(from, m_Map);
                         }
                         else
                         {
@@ -663,6 +664,18 @@ public partial class TreasureMap : MapItem
         }
     }
 
+    /// <summary>
+    ///     How long a dig takes until the chest is up if nothing cuts it short: the timer ticks at once and then every second, the chest
+    ///     appears 15 below the ground at the eleventh tick and rises one a tick.
+    /// </summary>
+    public static readonly TimeSpan DigDuration = TimeSpan.FromSeconds(25.0);
+
+    /// <summary>Raised as a dig for the chest begins.</summary>
+    public static event Action<Mobile, TreasureMap> DigStarted;
+
+    /// <summary>Raised when a dig is cut short (moving, another action, something on the spot); the chest and dirt go.</summary>
+    public static event Action<Mobile, TreasureMap> DigStopped;
+
     private class DigTimer : Timer
     {
         private Mobile m_From;
@@ -707,6 +720,8 @@ public partial class TreasureMap : MapItem
             m_Chest?.Delete();
             m_Dirt1?.Delete();
             m_Dirt2?.Delete();
+
+            DigStopped?.Invoke(m_From, m_TreasureMap);
         }
 
         protected override void OnTick()

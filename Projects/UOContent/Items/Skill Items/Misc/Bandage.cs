@@ -160,11 +160,19 @@ public class BandageContext : Timer
         ++Slips;
     }
 
+    /// <summary>Stops the bandage before it finishes; it raises <see cref="Stopped"/>.</summary>
     public void StopHeal()
     {
         _table.Remove(Healer);
         Stop();
+        Stopped?.Invoke(this);
     }
+
+    /// <summary>Raised when a bandage is stopped before it finishes (a new bandage replaces it, or something stops it).</summary>
+    public static event Action<BandageContext> Stopped;
+
+    /// <summary>Raised as a bandage starts, with how long it takes until it heals (or fails).</summary>
+    public static event Action<BandageContext, TimeSpan> Started;
 
     public static BandageContext GetContext(Mobile healer)
     {
@@ -194,7 +202,8 @@ public class BandageContext : Timer
 
     protected override void OnTick()
     {
-        StopHeal();
+        _table.Remove(Healer);
+        Stop();
 
         int healerNumber;
         int patientNumber;
@@ -538,6 +547,7 @@ public class BandageContext : Timer
             context = new BandageContext(healer, patient, TimeSpan.FromMilliseconds(seconds));
             _table[healer] = context;
             context.Start();
+            Started?.Invoke(context, context.Delay);
 
             if (!onSelf)
             {

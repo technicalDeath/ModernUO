@@ -7,7 +7,7 @@ namespace Server.Items;
 [SerializationGenerator(0, false)]
 public abstract partial class CookableFood : Item
 {
-    private static readonly TimeSpan CookDelay = TimeSpan.FromSeconds(5.0);
+    public static readonly TimeSpan CookDelay = TimeSpan.FromSeconds(5.0);
 
     public enum CookResult
     {

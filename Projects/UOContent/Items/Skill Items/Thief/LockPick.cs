@@ -35,6 +35,9 @@ public partial class Lockpick : Item
     ///     Raised as an attempt on a lock begins and as it ends, so a distribution can react without replacing the
     ///     item. Refusals before an attempt begins (not locked, not a lock) raise nothing.
     /// </summary>
+    /// <summary>How long a lockpicking attempt takes before it succeeds or fails.</summary>
+    public static readonly TimeSpan AttemptDelay = TimeSpan.FromSeconds(3.0);
+
     public static event Action<Mobile, ILockpickable, Lockpick> AttemptStarted;
 
     public static event Action<Mobile, ILockpickable, Lockpick, LockpickResult> AttemptEnded;
@@ -109,7 +112,7 @@ public partial class Lockpick : Item
         private readonly ILockpickable _item;
         private readonly Lockpick _lockpick;
 
-        public InternalTimer(Mobile from, ILockpickable item, Lockpick lockpick) : base(TimeSpan.FromSeconds(3.0))
+        public InternalTimer(Mobile from, ILockpickable item, Lockpick lockpick) : base(AttemptDelay)
         {
             _from = from;
             _item = item;

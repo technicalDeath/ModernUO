@@ -31,6 +31,12 @@ namespace Server.SkillHandlers
 
         public static event Action<Mobile, BaseCreature, TameResult> AttemptEnded;
 
+        /// <summary>The time between taming steps; an attempt ends at its last step.</summary>
+        public static readonly TimeSpan StepDelay = TimeSpan.FromSeconds(3.0);
+
+        /// <summary>Raised as an attempt begins, with how long it lasts until its result if nothing cuts it short.</summary>
+        public static event Action<Mobile, BaseCreature, TimeSpan> AttemptTimed;
+
         public static void Initialize()
         {
             SkillInfo.Table[(int)SkillName.AnimalTaming].Callback = OnUse;
@@ -265,10 +271,12 @@ namespace Server.SkillHandlers
                     // *begins taming a creature.*
                     from.NonlocalOverheadMessage(MessageType.Emote, 0x59, 1010598);
 
-                    new InternalTimer(from, creature, Utility.Random(3, 2)).Start();
+                    var steps = Utility.Random(3, 2);
+                    new InternalTimer(from, creature, steps).Start();
 
                     m_SetSkillTime = false;
                     AttemptStarted?.Invoke(from, creature);
+                    AttemptTimed?.Invoke(from, creature, StepDelay * steps);
                 }
             }
 
@@ -283,11 +291,7 @@ namespace Server.SkillHandlers
                 private int m_Count;
                 private bool m_Paralyzed;
 
-                public InternalTimer(Mobile tamer, BaseCreature creature, int count) : base(
-                    TimeSpan.FromSeconds(3.0),
-                    TimeSpan.FromSeconds(3.0),
-                    count
-                )
+                public InternalTimer(Mobile tamer, BaseCreature creature, int count) : base(StepDelay, StepDelay, count)
                 {
                     m_Tamer = tamer;
                     m_Creature = creature;
