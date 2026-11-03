@@ -28,7 +28,13 @@ namespace Server.Mobiles
         {
             Type = type;
             m_Price = price;
-            MaxAmount = m_Amount = amount;
+            var adjusted = StockAmountAdjust != null && type != null ? Math.Clamp(StockAmountAdjust(type, amount), 1, 999) : amount;
+            if (adjusted != amount)
+            {
+                MinAmount = adjusted;      // a raised line keeps its raised stock through OnRestock's halving
+            }
+
+            MaxAmount = m_Amount = adjusted;
             ItemID = itemID;
             Hue = hue;
             Args = args;
@@ -103,6 +109,14 @@ namespace Server.Mobiles
 
         public int MaxAmount { get; set; }
 
+        /// <summary>
+        ///     Shard hook: a vendor line's starting stock from its type and the stock list's amount (shard data). Unset keeps the stock amounts.
+        /// </summary>
+        public static Func<Type, int, int> StockAmountAdjust { get; set; }
+
+        /// <summary>The lowest MaxAmount OnRestock halves to: the adjusted stock of a line StockAmountAdjust changed, else 0 (stock behaviour).</summary>
+        public int MinAmount { get; private set; }
+
         // get a new instance of an object (we just bought it)
         public virtual IEntity GetEntity() => Type.CreateInstance<IEntity>(Args);
 
@@ -136,7 +150,7 @@ namespace Server.Mobiles
 
                 if (m_Amount >= halfQuantity)
                 {
-                    MaxAmount = halfQuantity;
+                    MaxAmount = Math.Max(halfQuantity, MinAmount);
                 }
             }
 

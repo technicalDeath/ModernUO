@@ -160,7 +160,10 @@ namespace Server.Mobiles
 
         public DateTime LastRestock { get; set; }
 
-        public virtual TimeSpan RestockDelay => TimeSpan.FromHours(1);
+        /// <summary>Shard hook: the restock interval for every vendor (shard data). Unset keeps the stock hour.</summary>
+        public static TimeSpan? RestockDelayOverride { get; set; }
+
+        public virtual TimeSpan RestockDelay => RestockDelayOverride ?? TimeSpan.FromHours(1);
 
         public virtual void Restock()
         {
